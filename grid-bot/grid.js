@@ -6,7 +6,9 @@ const gridNumber = 145;    // Number of grids
 const leverage = 4;  // Leverage
 const investedAmount = 500;  // Invested amount in USD
 
-const amountPerGridInCoins = 1100; // Amount per grid in coins
+const amountPerGridInCoins = 1310; // Amount per grid in coins
+
+const pricePrecesionStepDecrease = 0.0001 // Price precesion to calculate liquidation price
 
 const gridMode = 'Arithmetic';  // Grid mode: Arithmetic
 const tradingFee = 0.0002;  // Trading fee per trade (0.02%)
@@ -69,7 +71,7 @@ let cumulativePnL = 0;
 
 // Iterate to find the price level where remaining margin reaches 0
 while (remainingMargin + cumulativePnL > 0) {
-    priceDropToZeroMargin -= 0.0001; // Decrease price by a small step
+    priceDropToZeroMargin -= pricePrecesionStepDecrease; // Decrease price by a small step
     cumulativePnL = 0;
     for (let i = 0; i < gridLevels.length; i++) {
         let entryPrice = gridLevels[i];
@@ -88,7 +90,7 @@ let cumulativeLoss = 0;
 
 // Iterate to find the liquidation price level where invested amount reaches 0
 while (investedAmount + (cumulativeLoss * (1 + maintenanceMarginRate)) - totalTradingFees > 0) {
-    liquidationPrice -= 0.0001; // Decrease price by a small step
+    liquidationPrice -= pricePrecesionStepDecrease; // Decrease price by a small step
     cumulativeLoss = 0;
     for (let i = 0; i < gridLevels.length; i++) {
         let entryPrice = gridLevels[i];
