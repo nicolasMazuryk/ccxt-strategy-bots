@@ -11,7 +11,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/grid.js"
+            "program": "${workspaceFolder}/stable-grid/run.js"
         }
     ]
 }
