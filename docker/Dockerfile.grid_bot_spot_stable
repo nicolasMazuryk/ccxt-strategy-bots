@@ -1,0 +1,29 @@
+FROM --platform=linux/arm64 node:22.12-slim
+
+WORKDIR /app
+
+COPY ../package*.json ./
+
+RUN npm ci
+
+COPY src/grid-bot/ ./grid-bot
+COPY src/utils/ ./utils
+
+EXPOSE 3000
+
+ENV NODE_ENV=production
+
+ENV PAIR_NAME=FDUSD/USDT
+ENV LOWER_PRICE=0.9950
+ENV UPPER_PRICE=1.0050
+ENV GRID_STEP=0.0001
+ENV PRICE_PRECISION=4
+ENV QUANTITY_PER_GRID=6
+ENV MARKET_TYPE=spot
+ENV IS_INFINITE_GRID=false
+ENV API_KEY=${API_KEY}
+ENV API_SECRET=${API_SECRET}
+
+# REDACTED
+
+CMD ["node", "grid-bot/run.js"]

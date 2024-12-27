@@ -1,0 +1,2 @@
+1. Allow spot trading for API-KEYs
+2. Furures weird error: Symbol is in reduce only mode

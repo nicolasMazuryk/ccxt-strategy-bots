@@ -8,10 +8,13 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
+            "env": {
+                "IS_VSCODE_DEBUGGER": "true"
+            },
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/stable-grid/run.js"
+            "program": "${workspaceFolder}/src/grid-bot/grid-risk-calculator/run.js"
         }
     ]
 }
