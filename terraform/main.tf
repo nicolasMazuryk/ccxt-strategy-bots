@@ -113,7 +113,7 @@ resource "aws_ecs_cluster" "trading_bots_cluster" {
 }
 
 ###############################################################################
-# IAM Roles
+# ECS Task IAM Role
 ###############################################################################
 resource "aws_iam_role" "ecs_task_execution_role" {
   name               = "trading-bot-execution-role"
@@ -157,6 +157,26 @@ resource "aws_cloudwatch_log_group" "log_groups" {
   for_each          = local.bots
   name              = "/ecs/${each.key}"
   retention_in_days = 7
+}
+
+###############################################################################
+# CloudWatch Errors to Lambda
+###############################################################################
+resource "aws_lambda_permission" "cloudwatch_errors_to_lambda_permissions" {
+  for_each      = local.bots
+  statement_id  = "AllowExecutionFromCloudWatch_${each.key}"
+  action        = "lambda:InvokeFunction"
+  function_name = "cloud-watch-errors-slack-notifications-lambda"
+  principal     = "logs.${var.aws_region}.amazonaws.com"
+  source_arn    = "${aws_cloudwatch_log_group.log_groups[each.key].arn}:*"
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "cloudwatch_errors_subscription_filters" {
+  for_each        = local.bots
+  name            = "${each.key}-error-subscription-filter"
+  log_group_name  = aws_cloudwatch_log_group.log_groups[each.key].name
+  filter_pattern  = "?ERROR ?Error ?error"
+  destination_arn = "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:function:cloud-watch-errors-slack-notifications-lambda"
 }
 
 ###############################################################################
@@ -235,60 +255,131 @@ resource "aws_ecs_service" "services" {
   }
 }
 
-###############################################################################
-# SNS Topic and Lambda Subscription for Error Notifications
-###############################################################################
-resource "aws_sns_topic" "error_notifications" {
-  name = "trading-bot-slack-error-notifications"
-}
-
-resource "aws_sns_topic_subscription" "lambda_subscription" {
-  topic_arn = aws_sns_topic.error_notifications.arn
-  protocol  = "lambda"
-  endpoint  = "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:function:cloud-watch-errors-slack-notifications-lambda"
-}
-
-resource "aws_lambda_permission" "with_sns" {
-  statement_id  = "AllowExecutionFromSNS"
-  action        = "lambda:InvokeFunction"
-  function_name = "cloud-watch-errors-slack-notifications-lambda"
-  principal     = "sns.amazonaws.com"
-  source_arn    = aws_sns_topic.error_notifications.arn
-}
 
 ###############################################################################
-# CloudWatch Metric Filters for Error Monitoring
+# SNS to Slack Notifier Lambda
 ###############################################################################
-resource "aws_cloudwatch_log_metric_filter" "error_filters" {
-  for_each       = local.bots
-  name           = "${each.key}s"
-  log_group_name = aws_cloudwatch_log_group.log_groups[each.key].name
-  pattern        = "\"?ERROR\""
+resource "aws_lambda_function" "sns_to_slack_notification" {
+  s3_bucket         = "algo-trading-bot"
+  s3_key            = "lambdas/sns_to_slack_notification.zip"
+  function_name    = "sns-to-slack-notification"
+  role             = aws_iam_role.sns_to_slack_notification_lambda_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
 
-  metric_transformation {
-    name      = each.key
-    namespace = "TradingBotErrors"
-    value     = "1"
-    unit      = "Count"
+  environment {
+    variables = {
+      SLACK_WEBHOOK_URL = var.slack_webhook_url
+    }
   }
 }
 
-###############################################################################
-# CloudWatch Alarms for Error Notifications
-###############################################################################
-resource "aws_cloudwatch_metric_alarm" "error_alarms" {
-  for_each            = aws_cloudwatch_log_metric_filter.error_filters
-  alarm_name          = "${each.key}_error_alarm"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = 1
-  metric_name         = each.value.metric_transformation[0].name
-  namespace           = "TradingBotErrors"
-  period              = 10 # 10 seconds is the minimum allowed period
-  statistic           = "Sum"
-  threshold           = 1
-  alarm_description   = "Monitors for ERROR messages in ${each.key} logs"
+resource "aws_iam_role" "sns_to_slack_notification_lambda_role" {
+  name = "sns-to-slack-notification-lambda-role"
+  description = "IAM role for Lambda function that forwards SNS messages to Slack"
 
-  alarm_actions = [aws_sns_topic.error_notifications.arn]
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "sns_to_slack_lambda_cloudwatch_logging_policy" {
+  name = "sns-to-slack-notification-lambda-cloudwatch-logging-policy"
+  role = aws_iam_role.sns_to_slack_notification_lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream", 
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:*"
+      }
+    ]
+  })
+}
+
+resource "aws_lambda_permission" "sns_to_slack_notification_lambda_permission" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.sns_to_slack_notification.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_sns_topic.trading_bot_resource_utilization_alarms.arn
+}
+
+###############################################################################
+# SNS Topic for Resource Utilization Alarms
+###############################################################################
+resource "aws_sns_topic" "trading_bot_resource_utilization_alarms" {
+  name = "trading-bot-resource-utilization-alarms"
+}
+
+resource "aws_sns_topic_subscription" "lambda_slack_subscription" {
+  topic_arn = aws_sns_topic.trading_bot_resource_utilization_alarms.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.sns_to_slack_notification.arn
+}
+
+###############################################################################
+# CloudWatch Alarms for CPU and Memory Utilization
+###############################################################################
+resource "aws_cloudwatch_metric_alarm" "cpu_alarms" {
+  for_each            = local.bots
+  alarm_name          = "${each.key}-cpu-alarm"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = 10 # 10 seconds
+  statistic           = "Average"
+  threshold           = 80 # 80% CPU utilization
+  alarm_description   = "CPU utilization is too high for ${each.key}"
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.trading_bots_cluster.name
+    ServiceName = aws_ecs_service.services[each.key].name
+  }
+
+  alarm_actions = [aws_sns_topic.trading_bot_resource_utilization_alarms.arn]
+  ok_actions    = [aws_sns_topic.trading_bot_resource_utilization_alarms.arn]
+
+  tags = {
+    Service = each.key
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "memory_alarms" {
+  for_each            = local.bots
+  alarm_name          = "${each.key}-memory-alarm"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "MemoryUtilization"
+  namespace           = "AWS/ECS"
+  period              = 10 # 10 seconds
+  statistic           = "Average"
+  threshold           = 80 # 80% memory utilization
+  alarm_description   = "Memory utilization is too high for ${each.key}"
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.trading_bots_cluster.name
+    ServiceName = aws_ecs_service.services[each.key].name
+  }
+
+  alarm_actions = [aws_sns_topic.trading_bot_resource_utilization_alarms.arn]
+  ok_actions    = [aws_sns_topic.trading_bot_resource_utilization_alarms.arn]
 
   tags = {
     Service = each.key
@@ -296,30 +387,42 @@ resource "aws_cloudwatch_metric_alarm" "error_alarms" {
 }
 
 ###############################################################################
-# IAM Policy for CloudWatch Logs Metric Filters
+# IAM Policy for CloudWatch Metrics
 ###############################################################################
-resource "aws_iam_policy" "cloudwatch_logs_metric_policy" {
-  name        = "CloudWatchLogsMetricPolicy"
-  description = "Allows CloudWatch Logs to publish metrics for ECS trading bots."
+resource "aws_iam_policy" "cloudwatch_metrics_policy" {
+  name        = "CloudWatchMetricsPolicy"
+  description = "Allows CloudWatch to publish metrics for ECS trading bots."
 
   policy = jsonencode({
-    Version = "2012-10-17",
+    Version = "2012-10-17"
     Statement = [
       {
         Effect = "Allow"
         Action = [
-          "logs:PutMetricFilter",
-          "logs:GetMetricFilter",
-          "logs:DeleteMetricFilter",
-          "logs:DescribeMetricFilters"
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricStatistics", 
+          "cloudwatch:GetMetricData",
+          "cloudwatch:ListMetrics",
+          "cloudwatch:DescribeAlarms",
+          "cloudwatch:DescribeAlarmsForMetric",
+          "cloudwatch:DescribeAlarmHistory"
         ]
-        Resource = "*"
+        Resource = "arn:aws:cloudwatch:${var.aws_region}:${var.aws_account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = [for log_group in aws_cloudwatch_log_group.log_groups : "${log_group.arn}:*"]
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy_attachment" "attach_cloudwatch_logs_metric_policy" {
+resource "aws_iam_role_policy_attachment" "attach_cloudwatch_metrics_policy" {
   role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = aws_iam_policy.cloudwatch_logs_metric_policy.arn
+  policy_arn = aws_iam_policy.cloudwatch_metrics_policy.arn
 }

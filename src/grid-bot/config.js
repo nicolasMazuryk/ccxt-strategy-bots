@@ -1,11 +1,11 @@
 // *************************************************************************************
-// IMPORTANT: Before running, deposit some dust amount of Base Asset for Taker Fees. Otherwise, the bot will not be able to place a sell order.
+// IMPORTANT: SPOT: Before running, deposit some dust amount of Base Asset for Taker Fees. Otherwise, the bot will not be able to place a sell order. Alternatively, deposite dust BNB for Taker Fees.
 // *************************************************************************************
 
 const riskConfig = {
     gridNumber: 50,
-    investedAmount: 300,
-    leverage: 3,
+    investedAmount: 250,
+    leverage: 5,
     tradingFee: 0.0002,
     maintenanceMarginRate: 0.0065,
 }
@@ -24,7 +24,7 @@ const defaultConfig = {
     // lowerPrice: 3200,
     // upperPrice: 3350,
     // pricePrecision: 2,
-    // quantityPerGrid: 0.0015,
+    // quantityPerGrid: 0.002,
     // marketType: 'spot', // spot, margin, linear, inverse, option, funding
     // isInfiniteGrid: true,
     // gridStep: 3,
@@ -42,7 +42,7 @@ const defaultConfig = {
     lowerPrice: 3200,
     upperPrice: 3350,
     pricePrecision: 2,
-    quantityPerGrid: 0.0045,
+    quantityPerGrid: 0.0063,
     marketType: 'linear', // spot, margin, linear, inverse, option, funding
     isInfiniteGrid: true,
     gridStep: 3,
