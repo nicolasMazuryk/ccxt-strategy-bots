@@ -4,13 +4,33 @@
 
 const riskConfig = {
     gridNumber: 50,
-    investedAmount: 250,
+    investedAmount: 1250,
     leverage: 5,
-    tradingFee: 0.0002,
-    maintenanceMarginRate: 0.0065,
+    tradingFee: 0.0000,
+    maintenanceMarginRate: 0.0065
 }
 
 const defaultConfig = {
+    // pairName: 'ACT/USDT',
+    // lowerPrice: 0.2920,
+    // upperPrice: 0.2940,
+    // pricePrecision: 4,
+    // quantityPerGrid: 20,
+    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    // isInfiniteGrid: true,
+    // gridStep: 0.0001,
+
+    pairName: 'ETH/USDT',
+    lowerPrice: 3300,
+    upperPrice: 3370,
+    pricePrecision: 2,
+    quantityPerGrid: 0.005,
+    marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    isInfiniteGrid: true,
+    gridStep: 2,
+
+    // ===============================
+
     // pairName: 'FDUSD/USDT',
     // lowerPrice: 0.9950,
     // upperPrice: 1.0050,
@@ -38,14 +58,14 @@ const defaultConfig = {
     // isInfiniteGrid: false,
     // gridStep: 0.000015,
 
-    pairName: 'ETH/USDT',
-    lowerPrice: 3200,
-    upperPrice: 3350,
-    pricePrecision: 2,
-    quantityPerGrid: 0.0063,
-    marketType: 'linear', // spot, margin, linear, inverse, option, funding
-    isInfiniteGrid: true,
-    gridStep: 3,
+    // pairName: 'ETH/USDT',
+    // lowerPrice: 3200,
+    // upperPrice: 3350,
+    // pricePrecision: 2,
+    // quantityPerGrid: 0.0063,
+    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    // isInfiniteGrid: true,
+    // gridStep: 3,
 
     apiKey: process.env.BINANCE_API_KEY,
     apiSecret: process.env.BINANCE_API_SECRET

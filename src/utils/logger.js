@@ -1,14 +1,16 @@
-import winston from 'winston';
-import chalk from 'chalk';
+import winston from 'winston'
+import chalk from 'chalk'
 
 const formatMultipleParams = (...args) => {
     return args.map(arg => {
         if (typeof arg === 'object') {
-            return JSON.stringify(arg);
+            return JSON.stringify(arg)
         }
-        return String(arg);
-    }).join(' ');
-};
+        return String(arg)
+    }).join(' ')
+}
+
+const isVscodeDebugger = process.env.IS_VSCODE_DEBUGGER == 'true'
 
 const logger = winston.createLogger({
     level: 'info',
@@ -34,23 +36,25 @@ const logger = winston.createLogger({
         })
     ),
     transports: [
-        new winston.transports.File({ 
-            filename: 'logs/error.log', 
-            level: 'error',
-            format: winston.format.combine(
-                winston.format.timestamp(),
-                winston.format.json()
-            )
-        }),
-        new winston.transports.File({ 
-            filename: 'logs/combined.log',
-            format: winston.format.combine(
-                winston.format.timestamp(),
-                winston.format.json()
-            )
-        }),
+        ...(isVscodeDebugger ? [] : [
+            new winston.transports.File({ 
+                filename: 'logs/error.log', 
+                level: 'error',
+                format: winston.format.combine(
+                    winston.format.timestamp(),
+                    winston.format.json()
+                )
+            }),
+            new winston.transports.File({ 
+                filename: 'logs/combined.log',
+                format: winston.format.combine(
+                    winston.format.timestamp(),
+                    winston.format.json()
+                )
+            })
+        ]),
         new winston.transports.Console({
-            forceConsole: process.env.IS_VSCODE_DEBUGGER == 'true',
+            forceConsole: isVscodeDebugger,
             
             format: winston.format.combine(
                 winston.format.timestamp(),
@@ -77,7 +81,7 @@ const logger = winston.createLogger({
             )
         })
     ]
-});
+})
 
 // Wrap logger methods to handle multiple parameters
 const wrappedLogger = {
@@ -85,8 +89,8 @@ const wrappedLogger = {
     error: (...args) => logger.error(formatMultipleParams(...args)),
     warn: (...args) => logger.warn(formatMultipleParams(...args)),
     debug: (...args) => logger.debug(formatMultipleParams(...args))
-};
+}
 
-export default wrappedLogger;
+export default wrappedLogger
 
-// export default console;
+// export default console

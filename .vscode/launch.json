@@ -14,7 +14,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/src/grid-bot/grid-risk-calculator/run.js"
+            "program": "${workspaceFolder}/src/backtester/run-backtest.js"
         }
     ]
 }

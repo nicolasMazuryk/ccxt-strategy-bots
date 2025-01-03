@@ -1,15 +1,6 @@
-import ccxt from 'ccxt';
-import {
-    WebsocketClient,
-    DefaultLogger,
-    isWsFormattedSpotUserDataExecutionReport,
-    isWsFormattedFuturesUserDataEvent,
-    isWsFormattedFuturesUserDataTradeUpdateEvent,
-} from 'binance';
-
-import chalk from 'chalk';
-import logger from '../utils/logger.js';
-import { formatNumberWithPrecision } from '../utils/utils.js';
+import logger from '../utils/logger.js'
+import chalk from 'chalk'
+import { formatNumberWithPrecision } from '../utils/utils.js'
 
 class GridBot {
     constructor({
@@ -19,10 +10,8 @@ class GridBot {
         gridStep,
         quantityPerGrid,
         pricePrecision,
-        apiKey,
-        apiSecret,
-        marketType,
-        isInfiniteGrid, 
+        isInfiniteGrid,
+        exchange,
     }) {
         this.pairName = pairName
         this.lowerPrice = lowerPrice
@@ -30,44 +19,22 @@ class GridBot {
         this.gridStep = gridStep
         this.quantityPerGrid = quantityPerGrid
         this.pricePrecision = pricePrecision
-        this.marketType = marketType
         this.isInfiniteGrid = isInfiniteGrid
         this.toPrecision = formatNumberWithPrecision(pricePrecision)
 
+        this.exchange = exchange
+
         this.gridLevels = []
-
         this.gridInitializationBestAskPrice = 0
-
         this.isProcessingOrderbookBestBidAskUpdateEvent = false
         this.isShuttingDown = false
 
-        logger.info(chalk.cyan(`Initializing ${marketType.toUpperCase()} Grid Bot for ${chalk.bold(pairName)}`))
+        logger.info(chalk.cyan(`Initializing ${this.exchange.marketType.toUpperCase()} Grid Bot for ${chalk.bold(pairName)}`))
         logger.info(chalk.cyan('Grid Parameters:'))
         logger.info(chalk.cyan(`- Price Range: ${chalk.yellow(lowerPrice)} to ${chalk.yellow(upperPrice)}`))
         logger.info(chalk.cyan(`- Grid Step: ${chalk.yellow(gridStep)}`))
         logger.info(chalk.cyan(`- Quantity Per Grid: ${chalk.yellow(quantityPerGrid)}`))
         logger.info(chalk.cyan(`- Infinite Grid Mode: ${isInfiniteGrid ? chalk.green('Enabled') : chalk.red('Disabled')}`))
-
-        this.wsClient = new WebsocketClient(
-            {
-              api_key: apiKey,
-              api_secret: apiSecret,
-              beautify: true,
-              logger: DefaultLogger
-            },
-        )
-
-        const exchange = this.marketType === 'spot' ? ccxt.binance : ccxt.binanceusdm
-
-        this.exchange = new exchange({
-            apiKey: apiKey,
-            secret: apiSecret,
-        })
-
-        this.exchange.options['maxRetriesOnFailure'] = 300
-        this.exchange.options['maxRetriesOnFailureDelay'] = 2000
-        
-        logger.info(chalk.green('Exchange connection initialized'))
     }
 
     generateGridLevels() {
@@ -96,51 +63,24 @@ class GridBot {
         return totalCapitalFormatted
     }
 
-    async initializeWebSocketHandlers() {
-        this.wsClient.on('formattedMessage', (data) => {
-            if (this.isShuttingDown) return
+    async handleOrderUpdate(order) {
+        const orderStatus = order.orderStatus
+        const side = order.side || order.orderSide
+        const price = order.price || order.originalPrice
+        
+        if (orderStatus === 'FILLED') {
+            logger.info(chalk.green(`Order filled - ${side} @ ${price}`))
 
-            if (this.marketType === 'spot') {
-                if (isWsFormattedSpotUserDataExecutionReport(data)) {
-                    return this.handleOrderUpdate(data)
-                }
+            if (side === 'BUY') {
+                const sellPrice = this.toPrecision(parseFloat(price) + this.gridStep)
+                logger.info(chalk.cyan(`Placing corresponding SELL order @ ${chalk.yellow(sellPrice)}`))
+                await this.placeSellOrder(sellPrice)
+            } else {
+                const buyPrice = this.toPrecision(parseFloat(price) - this.gridStep)
+                logger.info(chalk.cyan(`Placing corresponding BUY order @ ${chalk.yellow(buyPrice)}`))
+                await this.placeBuyOrder(buyPrice)
             }
-
-            if (this.marketType === 'linear') {
-                if (isWsFormattedFuturesUserDataTradeUpdateEvent(data)) {
-                    return this.handleOrderUpdate(data.order)
-                }
-            }
-
-            if (data.eventType === 'bookTicker') {
-                return this.onOrderbookBestBidAskUpdateEvent(data)
-            }
-        })
-        
-        this.wsClient.on('open', (data) => {
-            logger.info(chalk.green(`WebSocket connection opened: ${data.wsKey} - ${data.ws.target.url}`))
-        })
-        
-        this.wsClient.on('reconnecting', (data) => {
-            logger.warn(chalk.yellow(`WebSocket reconnecting... Channel: ${data?.wsKey}`))
-        })
-        
-        this.wsClient.on('reconnected', (data) => {
-            if (this.isShuttingDown) return
-
-            if (
-                typeof data?.wsKey === 'string' &&
-                data.wsKey.toLowerCase().includes('userdata')
-              ) {
-                console.log(chalk.green('ws for user data stream has reconnected ', data?.wsKey))
-              } else {
-                logger.info(chalk.green(`WebSocket reconnected: ${data?.wsKey}`))
-              }
-        })
-        
-        this.wsClient.on('error', (data) => {
-            logger.error(chalk.red(`WebSocket ERROR on channel ${data?.wsKey}`))
-        })
+        }
     }
 
     async onOrderbookBestBidAskUpdateEvent(data) {
@@ -187,26 +127,6 @@ class GridBot {
         }
     }
 
-    async handleOrderUpdate(order) {
-        const orderStatus = order.orderStatus
-        const side = order.side || order.orderSide
-        const price = order.price || order.originalPrice
-        
-        if (orderStatus === 'FILLED') {
-            logger.info(chalk.green(`Order filled - ${side} @ ${price}`))
-
-            if (side === 'BUY') {
-                const sellPrice = this.toPrecision(parseFloat(price) + this.gridStep)
-                logger.info(chalk.cyan(`Placing corresponding SELL order @ ${chalk.yellow(sellPrice)}`))
-                await this.placeSellOrder(sellPrice)
-            } else {
-                const buyPrice = this.toPrecision(parseFloat(price) - this.gridStep)
-                logger.info(chalk.cyan(`Placing corresponding BUY order @ ${chalk.yellow(buyPrice)}`))
-                await this.placeBuyOrder(buyPrice)
-            }
-        }
-    }
-
     async placeBuyOrder(price) {
         try {
             const order = await this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price)
@@ -234,16 +154,14 @@ class GridBot {
             this.generateGridLevels()
             const totalCapital = this.calculateTotalCapital()
 
-            await this.initializeWebSocketHandlers()
-            
-            if (this.marketType === 'spot') {
-                logger.info(chalk.cyan('Subscribing to spot user data stream...'))
-                await this.wsClient.subscribeSpotUserDataStream()
-            }
-            if (this.marketType === 'linear') {
-                logger.info(chalk.cyan('Subscribing to USDM futures user data stream...'))
-                await this.wsClient.subscribeUsdFuturesUserDataStream()
-            }
+            await this.exchange.initializeWebSocket()
+            await this.exchange.subscribeToUserData()
+
+            // this.exchange.onOrderUpdate((order) => this.handleOrderUpdate(order))
+            // this.exchange.onPriceUpdate((data) => this.onOrderbookBestBidAskUpdateEvent(data))
+
+            this.exchange.onOrderUpdate = this.handleOrderUpdate.bind(this)
+            this.exchange.onPriceUpdate = this.onOrderbookBestBidAskUpdateEvent.bind(this)
 
             const orderbook = await this.exchange.fetchOrderBook(this.pairName)
             this.gridInitializationBestAskPrice = orderbook.asks[0][0]
@@ -257,15 +175,7 @@ class GridBot {
                 }
             }
 
-            if (this.marketType === 'spot') {
-                logger.info(chalk.cyan('Subscribing to spot book ticker...'))
-                this.wsClient.subscribeSymbolBookTicker(this.pairName.replace('/', ''), 'spot')
-            }
-            if (this.marketType === 'linear') {
-                logger.info(chalk.cyan('Subscribing to futures book ticker...'))
-                this.wsClient.subscribeSymbolBookTicker(this.pairName.replace('/', ''), 'usdm')
-            }
-
+            await this.exchange.subscribeToBookTicker(this.pairName)
             logger.info(chalk.green('====== Grid initialization complete ======'))
 
         } catch (error) {
@@ -296,7 +206,7 @@ class GridBot {
 
         try {
             logger.info(chalk.yellow('Closing WebSocket connections...'))
-            this.wsClient.closeAll()
+            this.exchange.closeAll()
 
             logger.info(chalk.yellow('Cancelling all open orders...'))
             const orders = await this.exchange.cancelAllOrders(this.pairName)
@@ -304,19 +214,33 @@ class GridBot {
             
             const [baseAsset] = this.pairName.split('/')
             const balance = await this.exchange.fetchBalance()
-            const baseBalance = balance[baseAsset]?.free
-            
-            if (baseBalance && baseBalance > 0) {
-                logger.info(chalk.yellow(`Selling remaining ${baseBalance} ${baseAsset} at market price...`))
-                await this.exchange.createMarketSellOrder(this.pairName, baseBalance)
-                logger.info(chalk.green(`Successfully sold ${baseBalance} ${baseAsset}`))
+
+            if (this.exchange.marketType === 'spot') {
+                const baseBalance = balance[baseAsset]?.free
+                if (baseBalance && baseBalance > 0) {
+                    logger.info(chalk.yellow(`Selling remaining ${baseBalance} ${baseAsset} at market price...`))
+                    await this.exchange.createMarketSellOrder(this.pairName, baseBalance)
+                    logger.info(chalk.green(`Successfully sold ${baseBalance} ${baseAsset}`))
+                }
+            } else if (this.exchange.marketType === 'linear') {
+                const positions = balance.info.positions
+                const position = positions.find(p => p.symbol === this.pairName.replace('/', ''))
+                const positionAmount = parseFloat(position?.positionAmt || 0)
+                
+                if (position && positionAmount !== 0) {
+                    logger.info(chalk.yellow(`Closing futures position of ${positionAmount} ${baseAsset}...`))
+                    await this.exchange.createMarketSellOrder(this.pairName, Math.abs(positionAmount))
+                    logger.info(chalk.green(`Successfully closed futures position of ${positionAmount} ${baseAsset}`))
+                }
             }
 
-            logger.info(chalk.green('Shutdown complete'))
+            logger.info(chalk.yellow('='.repeat(50)))
+            logger.info(chalk.yellow('Graceful shutdown complete'))
+            logger.info(chalk.yellow('='.repeat(50)))
         } catch (error) {
             logger.error(chalk.red(`Error during shutdown: ${error.message}`))
         }
     }
 }
 
-export { GridBot }
+export default GridBot

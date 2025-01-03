@@ -4,4 +4,6 @@ terraform/.terraform/*
 
 logs/*
 
+market-data/*
+
 .DS_Store
