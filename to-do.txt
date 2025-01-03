@@ -11,6 +11,33 @@ Backtester:
     - Store cumulative Fees
     - Refactor Position PnL calculation (function that takes order and recalculate all position parameters: entry price, position size, unrealized PnL, realized PnL, etc.)
 
+    ----------------------------
+    Position:
+        positionSide (long/short)
+        positionAmount
+        entryPrice
+        liquidationPrice
+        margin
+        unrealizedPnL
+        notional
+        maintenanceMargin
+        leverage
+
+Wallet:
+    balance
+    unrealizedPnL
+    marginBalance
+    availableBalance
+    cummulativeFees
+    accountMarginRatio
+    accountMaintenanceMargin
+    accountEquity
+    positionValue
+    actualLeverage
+
+
+// TODO: research npm package for exchange emulation
+
 - Risk metrics (Sharpe ratio, max drawdown, etc.)
 - Equity curve visualization
 

@@ -53,18 +53,12 @@ class SpotExchangeEmulator extends BaseEmulator {
                 ))
                 
                 this._updateOrderAfterExecution(order, time, cost, fee, quoteAsset)
-                return true
             } else {
-                order.orderStatus = 'REJECTED'
-                order.error = `Insufficient ${quoteAsset} balance. Required: ${totalCost}, Available: ${this.balance[quoteAsset]}`
-                
-                this.onOrderUpdate(order)
-
-                throw new Error(order.error)
-
-                return false
+                this._rejectOrder(order, `Insufficient ${quoteAsset} balance. Required: ${totalCost}, Available: ${this.balance[quoteAsset]}`)
             }
-        } else {  // SELL
+        }
+
+        if (order.side === 'SELL') {
             if (this.balance[baseAsset] >= order.quantity) {
                 const receivedAmount = cost * (1 - fee)
                 this.balance[quoteAsset] += receivedAmount
@@ -77,18 +71,19 @@ class SpotExchangeEmulator extends BaseEmulator {
                 ))
                 
                 this._updateOrderAfterExecution(order, time, cost, fee, quoteAsset)
-                return true
             } else {
-                order.orderStatus = 'REJECTED'
-                order.error = `Insufficient ${baseAsset} balance. Required: ${order.quantity}, Available: ${this.balance[baseAsset]}`
-                
-                this.onOrderUpdate(order)
-
-                throw new Error(order.error)
-                
-                return false
+                this._rejectOrder(order, `Insufficient ${baseAsset} balance. Required: ${order.quantity}, Available: ${this.balance[baseAsset]}`)
             }
         }
+    }
+
+    _rejectOrder(order, errorMessage) {
+        order.orderStatus = 'REJECTED'
+        order.error = errorMessage
+        
+        this.onOrderUpdate(order)
+
+        throw new Error(order.error)
     }
 }
 

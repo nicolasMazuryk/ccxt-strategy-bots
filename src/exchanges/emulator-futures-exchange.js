@@ -44,119 +44,124 @@ class FuturesExchangeEmulator extends BaseEmulator {
 
     processNewPrice(price, time) {
         super.processNewPrice(price, time)
-        this._updatePositionPnL(price)
+        if (!this._checkLiquidation(price)) {
+            this._updatePositionPnL(price)
+        }
     }
 
     _executeOrder(order, executionPrice, time) {
         const [_, quoteAsset] = order.pairName.split('/')
+        const position = this.positions[order.pairName]
+        const orderDetails = this._calculateOrderDetails(order, executionPrice, position)
+
+        if (!this._validateMarginRequirements(order, orderDetails, quoteAsset)) return
+        if (!this._validatePositionRisk(order, executionPrice)) return
+
+        const oldPosition = { ...position }
+        const realizedPnl = this._processPositionUpdate(order, position, executionPrice, oldPosition)
+        
+        this._updateBalanceAndFees(orderDetails.feeCost, realizedPnl, quoteAsset)
+        this._logPositionUpdate(position, oldPosition, quoteAsset)
+        
+        this._updateOrderAfterExecution(order, time, orderDetails.cost, orderDetails.fee, quoteAsset)
+        this._updatePositionPnL(executionPrice)
+    }
+
+    _calculateOrderDetails(order, executionPrice, position) {
         const cost = order.quantity * executionPrice
         const fee = order.type === 'MARKET' ? this.takerFee : this.makerFee
-
-        const position = this.positions[order.pairName]
         const margin = cost / position.leverage
         const feeCost = cost * fee
 
-        // Check if we have enough margin
-        if (this.balance[quoteAsset] < margin + feeCost) {
+        return { cost, fee, margin, feeCost }
+    }
+
+    _validateMarginRequirements(order, orderDetails, quoteAsset) {
+        const position = this.positions[order.pairName]
+        const unrealizedPnl = position.unrealizedPnl
+        const availableBalance = this.balance[quoteAsset] + unrealizedPnl
+        const requiredAmount = orderDetails.margin + orderDetails.feeCost
+
+        if (availableBalance < requiredAmount) {
             order.orderStatus = 'REJECTED'
-            order.error = `Insufficient margin. Required: ${margin + feeCost}, Available: ${this.balance[quoteAsset]}`
-            
+            order.error = `Insufficient margin. Required: ${requiredAmount}, Available: ${availableBalance}`
             this.onOrderUpdate(order)
-
             throw new Error(order.error)
-
             return false
         }
-// ------------------------------------------------------------------------------------------------
-        // Calculate potential new position size
-        let newPositionAmt = position.positionAmt
-        if (order.side === 'BUY') {
-            newPositionAmt += order.quantity // TODO: calculation is not exact. js floating point precision issue.
-        } else {
-            newPositionAmt -= order.quantity // TODO: calculation is not exact. js floating point precision issue.
-        }
+        return true
+    }
 
-        // Check if the new position would exceed maximum allowed leverage
-        const maxPositionSize = (this.balance[quoteAsset] * position.leverage) / executionPrice // TODO: calculation do not include PnL and include already filled orders.
-        if (Math.abs(newPositionAmt) > maxPositionSize) {
-            order.orderStatus = 'REJECTED'
-            order.error = `Position size would exceed maximum allowed leverage. Max size: ${maxPositionSize}, Attempted: ${Math.abs(newPositionAmt)}`
-            
-            this.onOrderUpdate(order)
-
-            throw new Error(order.error)
-
-            return false
-        }
-// ------------------------------------------------------------------------------------------------
-        const oldPositionAmt = position.positionAmt
-        const oldEntryPrice = position.entryPrice
-        const oldUnrealizedPnl = position.unrealizedPnl
-
-        // Calculate realized PnL for any position size change
+    _processPositionUpdate(order, position, executionPrice, oldPosition) {
         let realizedPnl = 0
-        if (oldPositionAmt !== 0) {
-            const closedAmount = Math.abs(order.quantity)
-            const priceDiff = executionPrice - oldEntryPrice
-            const positionDirection = Math.sign(oldPositionAmt)
-            const orderDirection = order.side === 'BUY' ? 1 : -1
 
-            // Only realize PnL if reducing position size
-            if (positionDirection !== orderDirection) {
-                realizedPnl = closedAmount * priceDiff * positionDirection
-                this.balance[quoteAsset] += realizedPnl
-                logger.info(chalk.green(
-                    `[PnL] Realized: ${realizedPnl} USDT`
-                    + `\n      New Balance: ${this.balance[quoteAsset]} USDT`
-                ))
-            }
+        if (oldPosition.positionAmt !== 0) {
+            realizedPnl = this._calculateRealizedPnl(order, oldPosition, executionPrice)
         }
 
-        // Update position amount
-        if (order.side === 'BUY') {
-            position.positionAmt += order.quantity // TODO: calculation is not exact. js floating point precision issue.
-        } else {
-            position.positionAmt -= order.quantity // TODO: calculation is not exact. js floating point precision issue.
-        }
+        this._updatePositionAmount(order, position)
+        this._updateEntryPrice(position, oldPosition, order, executionPrice)
 
-        // Calculate average entry price
-        if (position.positionAmt !== 0) {
-            if (oldPositionAmt === 0) {
-                // Opening a new position
-                position.entryPrice = executionPrice
-            } else if (
-                Math.sign(oldPositionAmt) === Math.sign(position.positionAmt) && 
-                Math.abs(position.positionAmt) > Math.abs(oldPositionAmt)
-            ) {
-                // Adding to existing position
-                const oldNotional = Math.abs(oldPositionAmt) * oldEntryPrice
-                const newNotional = order.quantity * executionPrice
-                const totalQuantity = Math.abs(position.positionAmt)
-                position.entryPrice = (oldNotional + newNotional) / totalQuantity
-            } else if (Math.abs(position.positionAmt) > 0) {
-                // Reducing position but still have remaining position
-                position.entryPrice = oldEntryPrice
-            } else {
-                // Position closed
-                position.entryPrice = 0
-            }
-        } else {
-            // Position fully closed
+        return realizedPnl
+    }
+
+    _calculateRealizedPnl(order, oldPosition, executionPrice) {
+        const closedAmount = Math.abs(order.quantity)
+        const priceDiff = executionPrice - oldPosition.entryPrice
+        const positionDirection = Math.sign(oldPosition.positionAmt)
+        const orderDirection = order.side === 'BUY' ? 1 : -1
+
+        if (positionDirection !== orderDirection) {
+            return closedAmount * priceDiff * positionDirection
+        }
+        return 0
+    }
+
+    _updatePositionAmount(order, position) {
+        const direction = order.side === 'BUY' ? 1 : -1
+        position.positionAmt += direction * order.quantity
+    }
+
+    _updateEntryPrice(position, oldPosition, order, executionPrice) {
+        if (position.positionAmt === 0) {
             position.entryPrice = 0
             position.unrealizedPnl = 0
+            return
         }
 
+        if (oldPosition.positionAmt === 0) {
+            position.entryPrice = executionPrice
+        } else if (
+            Math.sign(oldPosition.positionAmt) === Math.sign(position.positionAmt) && 
+            Math.abs(position.positionAmt) > Math.abs(oldPosition.positionAmt)
+        ) {
+            const oldNotional = Math.abs(oldPosition.positionAmt) * oldPosition.entryPrice
+            const newNotional = order.quantity * executionPrice
+            const totalQuantity = Math.abs(position.positionAmt)
+            position.entryPrice = (oldNotional + newNotional) / totalQuantity
+        } else if (Math.abs(position.positionAmt) > 0) {
+            position.entryPrice = oldPosition.entryPrice
+        }
+    }
+
+    _updateBalanceAndFees(feeCost, realizedPnl, quoteAsset) {
+        if (realizedPnl) {
+            this.balance[quoteAsset] += realizedPnl
+            logger.info(chalk.green(
+                `[PnL] Realized: ${realizedPnl} USDT`
+                + `\n      New Balance: ${this.balance[quoteAsset]} USDT`
+            ))
+        }
         this.balance[quoteAsset] -= feeCost
+    }
+
+    _logPositionUpdate(position, oldPosition, quoteAsset) {
         logger.info(chalk.blue(
             `[Position] Update:`
-            + `\n          Size: ${position.positionAmt} (was: ${oldPositionAmt})`
-            + `\n          Entry: ${position.entryPrice} (was: ${oldEntryPrice})`
+            + `\n          Size: ${position.positionAmt} (was: ${oldPosition.positionAmt})`
+            + `\n          Entry: ${position.entryPrice} (was: ${oldPosition.entryPrice})`
             + `\n          Balance: ${this.balance[quoteAsset]} ${quoteAsset}`
         ))
-
-        this._updateOrderAfterExecution(order, time, cost, fee, quoteAsset)
-        this._updatePositionPnL(executionPrice)
-        return true
     }
 
     _updatePositionPnL(currentPrice) {
@@ -174,10 +179,66 @@ class FuturesExchangeEmulator extends BaseEmulator {
             }
         }
     }
+    _checkLiquidation(price) {
+        const position = this.positions[this.pairName]
+        if (position.positionAmt === 0) return false
 
-    async setLeverage(leverage, pairName) {
-        this.positions[pairName].leverage = leverage
+        const [_, quoteAsset] = this.pairName.split('/')
+        const maintenanceMargin = Math.abs(position.positionAmt * price * 0.004) // 0.4% maintenance margin
+        const unrealizedPnl = position.positionAmt * (price - position.entryPrice)
+        const walletBalance = this.balance[quoteAsset]
+        const accountEquity = walletBalance + unrealizedPnl
+
+        if (accountEquity <= maintenanceMargin) {
+            this._handleLiquidation(price)
+            return true
+        }
+        return false
     }
+
+    _handleLiquidation(price) {
+        const position = this.positions[this.pairName]
+        const [_, quoteAsset] = this.pairName.split('/')
+        
+        logger.info(chalk.red(
+            `[LIQUIDATION] Position liquidated at ${price}`
+            + `\n             Size: ${position.positionAmt}`
+            + `\n             Entry: ${position.entryPrice}`
+        ))
+
+        // Close position at liquidation price
+        const liquidationOrder = {
+            pairName: this.pairName,
+            side: position.positionAmt > 0 ? 'SELL' : 'BUY',
+            quantity: Math.abs(position.positionAmt),
+            type: 'MARKET'
+        }
+
+        this._executeOrder(liquidationOrder, price, Date.now())
+    }
+
+    _validatePositionRisk(order, executionPrice) {
+        const position = this.positions[order.pairName]
+        const [_, quoteAsset] = order.pairName.split('/')
+        
+        // Calculate max position size based on available balance
+        const availableBalance = this.balance[quoteAsset]
+        const maxPositionSize = (availableBalance * position.leverage) / executionPrice
+        
+        // Calculate new position size after order
+        const direction = order.side === 'BUY' ? 1 : -1
+        const newPositionSize = Math.abs(position.positionAmt + (direction * order.quantity))
+        
+        if (newPositionSize > maxPositionSize) {
+            order.orderStatus = 'REJECTED'
+            order.error = `Position size exceeds maximum allowed. Max: ${maxPositionSize}, Attempted: ${newPositionSize}`
+            this.onOrderUpdate(order)
+            throw new Error(order.error)
+            return false
+        }
+        return true
+    }
+
 }
 
 export { FuturesExchangeEmulator }
