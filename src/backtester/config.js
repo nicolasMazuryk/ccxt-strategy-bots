@@ -21,6 +21,14 @@ const MAKER_FEE = 0.000 // 0.1%
 const LEVERAGE = 5
 const MAINTENANCE_MARGIN_RATE = 0.0065 // https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin
 
+const INITIAL_BALANCES = {
+    USDT: 1250,
+    ETH: 1,
+    // AMB: 0,
+    // ACT: 0,
+    // BNB: 0
+}
+
 export {
     MARKET,
     PAIR_NAME,
@@ -32,5 +40,6 @@ export {
     TAKER_FEE,
     MAKER_FEE,
     LEVERAGE,
-    MAINTENANCE_MARGIN_RATE
+    MAINTENANCE_MARGIN_RATE,
+    INITIAL_BALANCES
 }

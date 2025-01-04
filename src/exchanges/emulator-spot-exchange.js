@@ -3,14 +3,9 @@ import logger from '../utils/logger.js'
 import chalk from 'chalk'
 
 class SpotExchangeEmulator extends BaseEmulator {
-    constructor({ initialBalance = 1000, pairName, initialPrice, takerFee, makerFee }) {
-        super({ pairName, marketType: 'spot', initialPrice, takerFee, makerFee })
-        
-        const [baseAsset, quoteAsset] = pairName.split('/')
-        this.balance = {
-            [quoteAsset]: initialBalance,
-            [baseAsset]: 1
-        }
+    constructor({ initialBalances, initialPrices, takerFee, makerFee }) {
+        super({ marketType: 'spot', initialPrices, takerFee, makerFee })
+        this.balance = { ...initialBalances }
     }
 
     async fetchBalance() {
@@ -27,10 +22,7 @@ class SpotExchangeEmulator extends BaseEmulator {
         return {
             info: { balances },
             free: { ...this.balance },
-            used: Object.keys(this.balance).reduce((acc, key) => {
-                acc[key] = 0
-                return acc
-            }, {}),
+            used: Object.fromEntries(Object.keys(this.balance).map(key => [key, 0])),
             total: { ...this.balance },
             timestamp: Date.now()
         }
@@ -45,9 +37,9 @@ class SpotExchangeEmulator extends BaseEmulator {
             const totalCost = cost * (1 + fee)
             if (this.balance[quoteAsset] >= totalCost) {
                 this.balance[quoteAsset] -= totalCost
-                this.balance[baseAsset] += order.quantity // TODO: calculation is not exact. js floating point precision issue.
+                this.balance[baseAsset] += order.quantity
                 logger.info(chalk.blue(
-                    `[Balance] After BUY:`
+                    `[Balance] After BUY ${order.pairName}:`
                     + `\n         ${this.balance[baseAsset]} ${baseAsset}`
                     + `\n         ${this.balance[quoteAsset]} ${quoteAsset}`
                 ))
@@ -62,10 +54,10 @@ class SpotExchangeEmulator extends BaseEmulator {
             if (this.balance[baseAsset] >= order.quantity) {
                 const receivedAmount = cost * (1 - fee)
                 this.balance[quoteAsset] += receivedAmount
-                this.balance[baseAsset] -= order.quantity // TODO: calculation is not exact. js floating point precision issue.
+                this.balance[baseAsset] -= order.quantity
                 
                 logger.info(chalk.blue(
-                    `[Balance] After SELL:`
+                    `[Balance] After SELL ${order.pairName}:`
                     + `\n         ${this.balance[baseAsset]} ${baseAsset}`
                     + `\n         ${this.balance[quoteAsset]} ${quoteAsset}`
                 ))

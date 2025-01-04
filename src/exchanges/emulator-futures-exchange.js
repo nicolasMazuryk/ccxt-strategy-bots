@@ -5,19 +5,18 @@ import { LEVERAGE } from '../backtester/config.js'
 import { getMaintenanceRate } from '../utils/maintenance-tier.js'
 
 class FuturesExchangeEmulator extends BaseEmulator {
-    constructor({ initialBalance = 1000, pairName, initialPrice, takerFee, makerFee }) {
-        super({ pairName, marketType: 'linear', initialPrice, takerFee, makerFee })
+    constructor({ initialBalances, initialPrices, takerFee, makerFee }) {
+        super({ marketType: 'linear', initialPrices, takerFee, makerFee })
     
-        
         // Wallet parameters
         this.wallet = {
-            balance: initialBalance,
+            balance: initialBalances.USDT,
             unrealizedPnL: 0,
-            marginBalance: initialBalance,
-            availableBalance: initialBalance,
+            marginBalance: initialBalances.USDT,
+            availableBalance: initialBalances.USDT,
             accountMarginRatio: 0,
             accountMaintenanceMargin: 0,
-            accountEquity: initialBalance,
+            accountEquity: initialBalances.USDT,
             positionValue: 0,
             actualLeverage: 0,
 
@@ -26,8 +25,38 @@ class FuturesExchangeEmulator extends BaseEmulator {
         }
         
         // Position parameters
-        this.positions = {
-            [pairName]: {
+        this.positions = {}
+    }
+
+    async fetchBalance() {
+        return {
+            info: {
+                balances: [{
+                    asset: 'USDT',
+                    balance: this.wallet.balance,
+                    crossWalletBalance: this.wallet.balance
+                }],
+                positions: Object.entries(this.positions).map(([pairName, position]) => ({
+                    symbol: pairName,
+                    ...position
+                })),
+                wallet: this.wallet
+            }
+        }
+    }
+
+    processNewPrice(pairName, price, time) {
+        super.processNewPrice(pairName, price, time)
+
+        if (this._checkLiquidation(pairName, price)) return
+
+        this._updatePositionPnL(pairName, price)
+    }
+
+    _initializePositionIfNotExists(pairName) {
+        if (!this.positions[pairName]) {
+            this.positions[pairName] = {
+                pairName,
                 positionSide: 'BOTH',
                 positionAmount: 0,
                 entryPrice: 0,
@@ -36,39 +65,16 @@ class FuturesExchangeEmulator extends BaseEmulator {
                 unrealizedPnL: 0,
                 notional: 0,
                 maintenanceMargin: 0,
-                leverage: LEVERAGE
+                leverage: LEVERAGE,
             }
         }
-    }
-
-    async fetchBalance() {
-        const [baseAsset, quoteAsset] = this.pairName.split('/')
-        return {
-            info: {
-                balances: [{
-                    asset: quoteAsset,
-                    balance: this.wallet.balance,
-                    crossWalletBalance: this.wallet.balance
-                }],
-                positions: [{
-                    symbol: this.pairName,
-                    ...this.positions[this.pairName]
-                }],
-                wallet: this.wallet
-            }
-        }
-    }
-
-    processNewPrice(price, time) {
-        super.processNewPrice(price, time)
-
-        if (this._checkLiquidation(price)) return
-
-        this._updatePositionPnL(price)
     }
 
     _executeOrder(order, executionPrice, time) {
         const [_, quoteAsset] = order.pairName.split('/')
+        
+        this._initializePositionIfNotExists(order.pairName)
+        
         const position = this.positions[order.pairName]
         const orderDetails = this._calculateOrderDetails(order, executionPrice, position)
 
@@ -81,10 +87,10 @@ class FuturesExchangeEmulator extends BaseEmulator {
         this._updateBalance(orderDetails.feeCost, realizedPnl, quoteAsset)
         this._updatePositionDetails(position, executionPrice, orderDetails)
         this._updateWallet(position, executionPrice, orderDetails.feeCost)
-        this._logPositionUpdate(position, oldPosition, quoteAsset)
+        this._logPositionUpdate(position, oldPosition, quoteAsset, order.pairName)
         
         this._updateOrderAfterExecution(order, time, orderDetails.cost, orderDetails.fee, quoteAsset)
-        this._updatePositionPnL(executionPrice)
+        this._updatePositionPnL(order.pairName, executionPrice)
     }
 
     _calculateOrderDetails(order, executionPrice, position) {
@@ -92,7 +98,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
         const fee = order.type === 'MARKET' ? this.takerFee : this.makerFee
         const margin = cost / position.leverage
         const feeCost = cost * fee
-        const maintenanceMargin = cost * getMaintenanceRate(this.pairName, cost)
+        const maintenanceMargin = cost * getMaintenanceRate(order.pairName, cost)
 
         return { cost, fee, margin, feeCost, maintenanceMargin }
     }
@@ -188,78 +194,78 @@ class FuturesExchangeEmulator extends BaseEmulator {
     }
 
     _updateBalance(feeCost, realizedPnl) {
-        const [_, quoteAsset] = this.pairName.split('/')
         if (realizedPnl) {
             this.wallet.balance += realizedPnl
             
             logger.info(chalk.green(
-                `[PnL] Realized: ${realizedPnl} ${quoteAsset}`
-                + `\n      Fees: ${feeCost} ${quoteAsset}`
-                + `\n      Net: ${realizedPnl - feeCost} ${quoteAsset}`
-                + `\n      New Balance: ${this.wallet.balance} ${quoteAsset}`
+                `[PnL] Realized: ${realizedPnl} USDT`
+                + `\n      Fees: ${feeCost} USDT`
+                + `\n      Net: ${realizedPnl - feeCost} USDT`
+                + `\n      New Balance: ${this.wallet.balance} USDT`
             ))
         }
         this.wallet.balance -= feeCost
         this.wallet.cummulativeFees += feeCost
     }
 
-    _logPositionUpdate(position, oldPosition, quoteAsset) {
+    _logPositionUpdate(position, oldPosition, quoteAsset, pairName) {
         logger.info(chalk.blue(
-            `[Position] Update:`
+            `[Position] Update for ${pairName}:`
             + `\n          Size: ${position.positionAmount} (was: ${oldPosition.positionAmount})`
             + `\n          Entry: ${position.entryPrice} (was: ${oldPosition.entryPrice})`
             + `\n          Balance: ${this.wallet.balance} ${quoteAsset}`
         ))
     }
 
-    _updatePositionPnL(currentPrice, quoteAsset) {
-        const position = this.positions[this.pairName]
-        if (position.positionAmount !== 0) {
-            const priceDiff = currentPrice - position.entryPrice
-            const oldPnL = position.unrealizedPnL
-            position.unrealizedPnL = position.positionAmount * priceDiff
-            
-            this._updatePositionDetails(position, currentPrice)
-            this._updateWallet(position, currentPrice)
-            
-            if (Math.abs(position.unrealizedPnL - oldPnL) > 0.01) {
-                logger.info(chalk.yellow(
-                    `[PnL] Update: ${position.unrealizedPnL} ${quoteAsset}`
-                    + `\n      Price: ${currentPrice}`
-                    + `\n      Liquidation Price: ${position.liquidationPrice}`
-                ))
-            }
+    _updatePositionPnL(pairName, currentPrice) {
+        const position = this.positions[pairName]
+        if (!position || position.positionAmount === 0) return
+
+        const priceDiff = currentPrice - position.entryPrice
+        const oldPnL = position.unrealizedPnL
+        position.unrealizedPnL = position.positionAmount * priceDiff
+        
+        this._updatePositionDetails(position, currentPrice)
+        this._updateWallet(position, currentPrice)
+        
+        if (Math.abs(position.unrealizedPnL - oldPnL) > 0.01) {
+            logger.info(chalk.yellow(
+                `[PnL] Update for ${pairName}: ${position.unrealizedPnL} USDT`
+                + `\n      Price: ${currentPrice}`
+                + `\n      Liquidation Price: ${position.liquidationPrice}`
+            ))
         }
     }
-    _checkLiquidation(price) {
-        const position = this.positions[this.pairName]
-        if (position.positionAmount === 0) return false
 
-        const mmRate = getMaintenanceRate(this.pairName, position.notional)
+    _checkLiquidation(pairName, price) {
+        const position = this.positions[pairName]
+        if (!position || position.positionAmount === 0) return false
+
+        const mmRate = getMaintenanceRate(pairName, position.notional)
         const maintenanceMargin = Math.abs(position.positionAmount * price * mmRate)
         const unrealizedPnl = position.positionAmount * (price - position.entryPrice)
         const walletBalance = this.wallet.balance
         const accountEquity = walletBalance + unrealizedPnl
 
         if (accountEquity <= maintenanceMargin) {
-            this._handleLiquidation(price)
+            this._handleLiquidation(pairName, price)
             return true
         }
         return false
     }
 
-    _handleLiquidation(price) {
-        const position = this.positions[this.pairName]
+    _handleLiquidation(pairName, price) {
+        const position = this.positions[pairName]
         
         logger.info(chalk.red(
-            `[LIQUIDATION] Position liquidated at ${price}`
+            `[LIQUIDATION] Position liquidated at ${price} for ${pairName}`
             + `\n             Size: ${position.positionAmount}`
             + `\n             Entry: ${position.entryPrice}`
         ))
 
         // Close position at liquidation price
         const liquidationOrder = {
-            pairName: this.pairName,
+            pairName: pairName,
             side: position.positionAmount > 0 ? 'SELL' : 'BUY',
             quantity: Math.abs(position.positionAmount),
             type: 'MARKET'
@@ -268,10 +274,10 @@ class FuturesExchangeEmulator extends BaseEmulator {
         this._executeOrder(liquidationOrder, price, Date.now())
     }
 
-    _updatePositionDetails(position, price, orderDetails) {
+    _updatePositionDetails(position, price) {
         position.notional = Math.abs(position.positionAmount * price)
         position.margin = position.notional / position.leverage
-        const mmRate = getMaintenanceRate(this.pairName, position.notional)
+        const mmRate = getMaintenanceRate(position.pairName, position.notional)
         position.maintenanceMargin = position.notional * mmRate
         
         // Calculate liquidation price
@@ -295,24 +301,24 @@ class FuturesExchangeEmulator extends BaseEmulator {
         this.wallet.actualLeverage = this.wallet.positionValue > 0 ? (this.wallet.positionValue / this.wallet.marginBalance) : 0
     }
 
-    ____applyFundingRate____(fundingRate, quoteAsset) {
-        const position = this.positions[this.pairName];
-        if (position.positionAmount !== 0) {
-            const notional = position.notional;
-            const fundingFee = notional * fundingRate;
+    ____applyFundingRate____(fundingRate, pairName) {
+        const position = this.positions[pairName]
+        if (position && position.positionAmount !== 0) {
+            const notional = position.notional
+            const fundingFee = notional * fundingRate
 
             // If long and funding rate is positive, user pays; if short, user receives, etc.
             // For simplicity, assume a positive funding rate means longs pay, shorts receive:
-            const direction = Math.sign(position.positionAmount) > 0 ? 1 : -1;
-            const cost = direction * fundingFee;
+            const direction = Math.sign(position.positionAmount) > 0 ? 1 : -1
+            const cost = direction * fundingFee
     
-            this.wallet.balance += cost; // If long, cost will be negative, so wallet balance decreases
+            this.wallet.balance += cost // If long, cost will be negative, so wallet balance decreases
             this.wallet.cummulativeFunding += cost
 
             logger.info(chalk.magenta(
-              `[Funding] Applied: ${cost} ${quoteAsset} (rate: ${fundingRate * 100}%)`
-              + `\n           New Balance: ${this.wallet.balance} ${quoteAsset}`
-            ));
+              `[Funding] Applied for ${pairName}: ${cost} USDT (rate: ${fundingRate * 100}%)`
+              + `\n           New Balance: ${this.wallet.balance} USDT`
+            ))
         }
     }
 }

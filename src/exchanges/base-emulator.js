@@ -3,22 +3,20 @@ import logger from '../utils/logger.js'
 import chalk from 'chalk'
 
 class BaseEmulator extends BaseExchange {
-    constructor({ pairName, marketType, initialPrice, takerFee, makerFee }) {
+    constructor({ marketType, takerFee, makerFee, initialPrices }) {
         super(marketType)
-        this.pairName = pairName
-        this.currentPrice = initialPrice
+        this.currentPrices = { ...initialPrices } || {}
         this.orders = new Map()
         this.lastOrderId = 0
-        // this.orderUpdateCallback = null
-        // this.priceUpdateCallback = null
         this.takerFee = takerFee
         this.makerFee = makerFee
     }
 
-    async fetchOrderBook() {
+    async fetchOrderBook(pairName) {
+        const price = this.currentPrices[pairName] || 0
         return {
-            asks: [[this.currentPrice, 1]],
-            bids: [[this.currentPrice, 1]]
+            asks: [[price, 1]],
+            bids: [[price, 1]]
         }
     }
 
@@ -34,7 +32,7 @@ class BaseEmulator extends BaseExchange {
             type: 'LIMIT',
         }
         this.orders.set(orderId, order)
-        logger.info(chalk.cyan(`Place BUY order: ${quantity} @ ${price}`))
+        logger.info(chalk.cyan(`Place BUY order: ${quantity} @ ${price} for ${pairName}`))
         return order
     }
 
@@ -50,13 +48,13 @@ class BaseEmulator extends BaseExchange {
             type: 'LIMIT',
         }
         this.orders.set(orderId, order)
-        logger.info(chalk.cyan(`Place SELL order: ${quantity} @ ${price}`))
+        logger.info(chalk.cyan(`Place SELL order: ${quantity} @ ${price} for ${pairName}`))
         return order
     }
 
     async createMarketBuyOrder(pairName, quantity) {
         const orderId = ++this.lastOrderId
-        const executionPrice = this.currentPrice
+        const executionPrice = this.currentPrices[pairName]
         
         const order = {
             id: orderId,
@@ -76,7 +74,7 @@ class BaseEmulator extends BaseExchange {
 
     async createMarketSellOrder(pairName, quantity) {
         const orderId = ++this.lastOrderId
-        const executionPrice = this.currentPrice
+        const executionPrice = this.currentPrices[pairName]
         
         const order = {
             id: orderId,
@@ -94,22 +92,22 @@ class BaseEmulator extends BaseExchange {
         return order
     }
 
-    processNewPrice(price, time) {
-        this.currentPrice = price
+    processNewPrice(pairName, price, time) {
+        this.currentPrices[pairName] = price
 
-        this._matchOrders(price, time)
+        this._matchOrders(pairName, price, time)
 
         this.onPriceUpdate({
             eventType: 'bookTicker',
-            pairName: this.pairName,
+            pairName: pairName,
             askPrice: price,
             bidPrice: price
         })
     }
 
-    _matchOrders(price, time) {
+    _matchOrders(pairName, price, time) {
         for (const [orderId, order] of this.orders.entries()) {
-            if (order.orderStatus !== 'NEW') continue
+            if (order.orderStatus !== 'NEW' || order.pairName !== pairName) continue
 
             if (order.side === 'BUY' && price < order.price) {
                 this._executeOrder(order, order.price, time)
@@ -128,14 +126,6 @@ class BaseEmulator extends BaseExchange {
 
         this.onOrderUpdate(order)
     }
-
-    // onOrderUpdate(callback) {
-    //     this.orderUpdateCallback = callback
-    // }
-
-    // onPriceUpdate(callback) {
-    //     this.priceUpdateCallback = callback
-    // }
 
     async initializeWebSocket() {
         logger.info(chalk.cyan('Initialized emulated WebSocket connection'))

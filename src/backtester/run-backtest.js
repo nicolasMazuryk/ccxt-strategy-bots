@@ -4,16 +4,15 @@ import { SpotExchangeEmulator } from '../exchanges/emulator-spot-exchange.js'
 import { FuturesExchangeEmulator } from '../exchanges/emulator-futures-exchange.js'
 import GridBot from '../grid-bot/grid-bot.js'
 import logger from '../utils/logger.js'
-import { config, riskConfig } from '../grid-bot/config.js'
-import { TAKER_FEE, MAKER_FEE } from './config.js'
+import { config } from '../grid-bot/config.js'
+import { TAKER_FEE, MAKER_FEE, INITIAL_BALANCES } from './config.js'
 
-async function initializeBacktestComponents(initialPrice) {
+async function initializeBacktestComponents(initialPrices) {
     try {
         const ExchangeEmulator = config.marketType === 'spot' ? SpotExchangeEmulator : FuturesExchangeEmulator
         const exchange = new ExchangeEmulator({
-            initialBalance: riskConfig.investedAmount,
-            pairName: config.pairName,
-            initialPrice,
+            initialBalances: INITIAL_BALANCES,
+            initialPrices,
             takerFee: TAKER_FEE,
             makerFee: MAKER_FEE,
         })
@@ -37,15 +36,19 @@ async function runBacktest() {
         logger.info('Loading historical market data...')
         const marketData = await getHistoricalMarketData()
         
+        const initialPrices = {
+            [config.pairName]: marketData[0].price
+        }
+
         logger.info('Initializing backtest components...')
-        const { exchange, bot, engine } = await initializeBacktestComponents(marketData[0].price)
+        const { exchange, bot, engine } = await initializeBacktestComponents(initialPrices)
 
 
         logger.info('Processing market data...')
         
 
         for (const trade of marketData) {
-            exchange.processNewPrice(trade.price, trade.timestamp)
+            exchange.processNewPrice(config.pairName, trade.price, trade.timestamp)
             
             logger.info(`Counter (index): ${counter++}/${marketData.length - 1}`)
             
