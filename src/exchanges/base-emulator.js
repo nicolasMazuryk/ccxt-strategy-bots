@@ -6,6 +6,7 @@ class BaseEmulator extends BaseExchange {
     constructor({ marketType, takerFee, makerFee, initialPrices }) {
         super(marketType)
         this.currentPrices = { ...initialPrices } || {}
+        this.currentTime = null
         this.orders = new Map()
         this.lastOrderId = 0
         this.takerFee = takerFee
@@ -30,6 +31,7 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'LIMIT',
+            time: this.currentTime
         }
         this.orders.set(orderId, order)
         logger.info(chalk.cyan(`Place BUY order: ${quantity} @ ${price} for ${pairName}`))
@@ -46,6 +48,7 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'LIMIT',
+            time: this.currentTime
         }
         this.orders.set(orderId, order)
         logger.info(chalk.cyan(`Place SELL order: ${quantity} @ ${price} for ${pairName}`))
@@ -63,11 +66,12 @@ class BaseEmulator extends BaseExchange {
             orderStatus: 'NEW',
             quantity,
             pairName,
-            type: 'MARKET', 
+            type: 'MARKET',
+            time: this.currentTime
         }
         
         this.orders.set(orderId, order)
-        this._executeOrder(order, executionPrice, Date.now())
+        this._executeOrder(order, executionPrice, this.currentTime)
         
         return order
     }
@@ -84,16 +88,18 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'MARKET',
+            time: this.currentTime
         }
         
         this.orders.set(orderId, order)
-        this._executeOrder(order, executionPrice, Date.now())
+        this._executeOrder(order, executionPrice, this.currentTime)
         
         return order
     }
 
     processNewPrice(pairName, price, time) {
         this.currentPrices[pairName] = price
+        this.currentTime = time
 
         this._matchOrders(pairName, price, time)
 
@@ -101,7 +107,8 @@ class BaseEmulator extends BaseExchange {
             eventType: 'bookTicker',
             pairName: pairName,
             askPrice: price,
-            bidPrice: price
+            bidPrice: price,
+            time: time
         })
     }
 

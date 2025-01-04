@@ -7,9 +7,6 @@ Backtester:
 - Binance Spot and Futures Data Structure (return same interface)
 - Manually aggregate trade data (each 0.25s on ETH/USDT)
 
-- Spot:
-    - Refactor Spot Exchange (similar to futures parameters. check real exchange parameters)
-
 
 // TODO: research npm package for exchange emulation
 
