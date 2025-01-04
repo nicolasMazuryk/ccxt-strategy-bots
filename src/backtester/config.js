@@ -19,6 +19,7 @@ const TAKER_FEE = 0.000 // 0.1%
 const MAKER_FEE = 0.000 // 0.1%
 
 const LEVERAGE = 5
+const MAINTENANCE_MARGIN_RATE = 0.0065 // https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin
 
 export {
     MARKET,
@@ -30,5 +31,6 @@ export {
     MARKET_DATA_DIR,
     TAKER_FEE,
     MAKER_FEE,
-    LEVERAGE
+    LEVERAGE,
+    MAINTENANCE_MARGIN_RATE
 }
