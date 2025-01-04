@@ -7,13 +7,8 @@ Backtester:
 - Binance Spot and Futures Data Structure (return same interface)
 - Manually aggregate trade data (each 0.25s on ETH/USDT)
 
-- Futures:
-    - Refactor Futures Exchange (remove duplicate code, make shorter and cleaner)
-    - Refactor Spot Exchange (similar to futures parameters. check real exchange parameters)
-
 - Spot:
-    - Move balance initialization from _executeOrder to constructor and pass from run-backtest.js
-        - Same for futures position initialization
+    - Refactor Spot Exchange (similar to futures parameters. check real exchange parameters)
 
 
 // TODO: research npm package for exchange emulation
@@ -49,6 +44,3 @@ Wallet:
     accountEquity
     positionValue
     actualLeverage
-
-
-// Now I want all inital balances (base and quote for spot, only USDT for futures) and current prices to be set in run-backtest.js and initialized in exchange's constructors.

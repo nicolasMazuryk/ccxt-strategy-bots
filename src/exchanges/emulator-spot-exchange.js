@@ -38,12 +38,8 @@ class SpotExchangeEmulator extends BaseEmulator {
             if (this.balance[quoteAsset] >= totalCost) {
                 this.balance[quoteAsset] -= totalCost
                 this.balance[baseAsset] += order.quantity
-                logger.info(chalk.blue(
-                    `[Balance] After BUY ${order.pairName}:`
-                    + `\n         ${this.balance[baseAsset]} ${baseAsset}`
-                    + `\n         ${this.balance[quoteAsset]} ${quoteAsset}`
-                ))
                 
+                this._logBalanceUpdate(order.side, order.pairName, baseAsset, quoteAsset)
                 this._updateOrderAfterExecution(order, time, cost, fee, quoteAsset)
             } else {
                 this._rejectOrder(order, `Insufficient ${quoteAsset} balance. Required: ${totalCost}, Available: ${this.balance[quoteAsset]}`)
@@ -56,12 +52,7 @@ class SpotExchangeEmulator extends BaseEmulator {
                 this.balance[quoteAsset] += receivedAmount
                 this.balance[baseAsset] -= order.quantity
                 
-                logger.info(chalk.blue(
-                    `[Balance] After SELL ${order.pairName}:`
-                    + `\n         ${this.balance[baseAsset]} ${baseAsset}`
-                    + `\n         ${this.balance[quoteAsset]} ${quoteAsset}`
-                ))
-                
+                this._logBalanceUpdate(order.side, order.pairName, baseAsset, quoteAsset)
                 this._updateOrderAfterExecution(order, time, cost, fee, quoteAsset)
             } else {
                 this._rejectOrder(order, `Insufficient ${baseAsset} balance. Required: ${order.quantity}, Available: ${this.balance[baseAsset]}`)
@@ -69,12 +60,21 @@ class SpotExchangeEmulator extends BaseEmulator {
         }
     }
 
+    _logBalanceUpdate(side, pairName, baseAsset, quoteAsset) {
+        logger.info(chalk.blue(
+            `[Balance] After ${side} ${pairName}:`
+            + Object.entries(this.balance)
+                .filter(([asset]) => [baseAsset, quoteAsset].includes(asset))
+                .map(([asset, amount]) => `\n         ${amount} ${asset}`)
+                .join('')
+        ))
+    }
+
     _rejectOrder(order, errorMessage) {
         order.orderStatus = 'REJECTED'
         order.error = errorMessage
         
         this.onOrderUpdate(order)
-
         throw new Error(order.error)
     }
 }
