@@ -31,16 +31,22 @@ class FuturesExchangeEmulator extends BaseEmulator {
     async fetchBalance() {
         return {
             info: {
-                balances: [{
-                    asset: 'USDT',
-                    balance: this.wallet.balance,
-                    crossWalletBalance: this.wallet.balance
-                }],
+                totalMaintMargin: this.wallet.accountMaintenanceMargin.toFixed(8),
+                totalWalletBalance: this.wallet.balance.toFixed(8),
+                totalUnrealizedProfit: this.wallet.unrealizedPnL.toFixed(8),
+                totalMarginBalance: this.wallet.marginBalance.toFixed(8),
+                availableBalance: this.wallet.availableBalance.toFixed(8),
+                maxWithdrawAmount: this.wallet.availableBalance.toFixed(8),
+
                 positions: Object.entries(this.positions).map(([pairName, position]) => ({
-                    symbol: pairName,
-                    ...position
-                })),
-                wallet: this.wallet
+                    symbol: pairName.replace('/', ''),
+                    positionSide: position.positionSide,
+                    positionAmt: position.positionAmount.toFixed(8),
+                    unrealizedProfit: position.unrealizedPnL.toFixed(8),
+                    notional: position.notional.toFixed(2),
+                    initialMargin: (Math.abs(position.notional) / LEVERAGE).toFixed(8),
+                    maintMargin: position.maintenanceMargin.toFixed(8),
+                }))
             }
         }
     }

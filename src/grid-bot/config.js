@@ -12,12 +12,12 @@ const riskConfig = {
 
 const defaultConfig = {
     // pairName: 'ACT/USDT',
-    // lowerPrice: 0.2920,
-    // upperPrice: 0.2940,
+    // lowerPrice: 0.3190,
+    // upperPrice: 0.3210,
     // pricePrecision: 4,
     // quantityPerGrid: 20,
     // marketType: 'linear', // spot, margin, linear, inverse, option, funding
-    // isInfiniteGrid: true,
+    // isInfiniteGrid: false,
     // gridStep: 0.0001,
 
     pairName: 'ETH/USDT',
@@ -25,7 +25,7 @@ const defaultConfig = {
     upperPrice: 3370,
     pricePrecision: 2,
     quantityPerGrid: 0.005,
-    marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    marketType: 'spot', // spot, margin, linear, inverse, option, funding
     isInfiniteGrid: true,
     gridStep: 2,
 

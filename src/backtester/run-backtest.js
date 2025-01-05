@@ -6,6 +6,7 @@ import GridBot from '../grid-bot/grid-bot.js'
 import logger from '../utils/logger.js'
 import { config } from '../grid-bot/config.js'
 import { TAKER_FEE, MAKER_FEE, INITIAL_BALANCES } from './config.js'
+import { setupGracefulShutdown } from '../utils/graceful-shotdown.js'
 
 async function initializeBacktestComponents(initialPrices) {
     try {
@@ -21,6 +22,8 @@ async function initializeBacktestComponents(initialPrices) {
         const engine = new BacktestEngine()
 
         await bot.start()
+
+        setupGracefulShutdown(bot)
 
         return { exchange, bot, engine }
     } catch (error) {
@@ -74,3 +77,4 @@ async function runBacktest() {
 }
 
 runBacktest()
+

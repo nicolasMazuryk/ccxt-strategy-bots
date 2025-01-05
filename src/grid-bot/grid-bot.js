@@ -64,6 +64,8 @@ class GridBot {
     }
 
     async handleOrderUpdate(order) {
+        if (this.isShuttingDown) return
+
         const orderStatus = order.orderStatus
         const side = order.side || order.orderSide
         const price = order.price || order.originalPrice
