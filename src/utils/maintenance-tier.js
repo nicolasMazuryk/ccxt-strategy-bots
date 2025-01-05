@@ -8,7 +8,17 @@ const TIERED_MAINTENANCE = {
         { notionalCap: 5000, rate: 0.02 },
         { notionalCap: 25000, rate: 0.025 },
         { notionalCap: 200000, rate: 0.05 },
-    ]
+    ],
+    '1000SATS/USDT': [
+        { notionalCap: 5000, rate: 0.02 },
+        { notionalCap: 25000, rate: 0.025 },
+        { notionalCap: 200000, rate: 0.05 },
+    ],
+    'FDUSD/USDT': [
+        { notionalCap: 5000, rate: 0.02 },
+        { notionalCap: 25000, rate: 0.025 },
+        { notionalCap: 200000, rate: 0.05 },
+    ],
 }
 
 const getMaintenanceRate = (pairName, notional) => {

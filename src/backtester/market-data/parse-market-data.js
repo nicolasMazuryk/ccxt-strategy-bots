@@ -2,20 +2,17 @@ import { parse } from 'csv-parse'
 import fs from 'fs'
 import path from 'path'
 import logger from '../../utils/logger.js'
-import { START_PERIOD_TIME, END_PERIOD_TIME, MARKET_DATA_DIR } from '../config.js'
+import { START_PERIOD_TIME, END_PERIOD_TIME, AGGREGATED_MARKET_DATA_DIR, RAW_MARKET_DATA_DIR } from '../config.js'
 
-async function parseCsvMarketData(dest) {
+async function parseCsvMarketData(dest, startPeriod = null, endPeriod = null) {
     logger.info(`Parsing CSV file: ${dest}`)
 
     return new Promise((resolve, reject) => {
         const marketData = []
-        const parser = parse({ 
-            delimiter: ',',
-            // cast: true // Enable automatic type casting
-        })
+        const parser = parse({ delimiter: ',' })
 
-        const startTime = new Date(START_PERIOD_TIME).getTime()
-        const endTime = new Date(END_PERIOD_TIME).getTime()
+        const startTime = new Date(startPeriod).getTime()
+        const endTime = new Date(endPeriod).getTime()
 
         fs.createReadStream(dest)
             .pipe(parser)
@@ -33,15 +30,23 @@ async function parseCsvMarketData(dest) {
                     ? Math.floor(Number(timestamp) / 1000) 
                     : Number(timestamp)
 
+                const data = {
+                    id: Number(aggregateTradeId),
+                    price: Number(price), 
+                    quantity: Number(quantity),
+                    timestamp: Number(timestamp),
+                    time: new Date(tradeTimestampSec),
+                    isBuyerTaker: String(wasBuyerMaker).toLowerCase() !== 'true'
+                }
+
+                // return all data if no time range is provided
+                if (!startPeriod && !endPeriod) {
+                    marketData.push(data)
+                    return
+                }
+
                 if (tradeTimestampSec >= startTime && tradeTimestampSec <= endTime) {
-                    marketData.push({
-                        id: Number(aggregateTradeId),
-                        price: Number(price), 
-                        quantity: Number(quantity),
-                        timestamp: Number(timestamp),
-                        time: new Date(tradeTimestampSec),
-                        isBuyerTaker: String(wasBuyerMaker).toLowerCase() !== 'true'
-                    })
+                    marketData.push(data)
                 }
             })
             .on('end', () => {
@@ -61,8 +66,8 @@ async function getHistoricalMarketData() {
         const startDate = START_PERIOD_TIME.split('T')[0]
         const endDate = END_PERIOD_TIME.split('T')[0]
 
-        // Get all CSV files from market data directory
-        const files = await fs.promises.readdir(MARKET_DATA_DIR)
+        // Get all CSV files from aggregated market data directory
+        const files = await fs.promises.readdir(AGGREGATED_MARKET_DATA_DIR)
         const csvFiles = files
             .filter(file => {
                 if (!file.endsWith('.csv')) return false
@@ -82,9 +87,9 @@ async function getHistoricalMarketData() {
         
         // Process each CSV file sequentially
         for (const file of csvFiles) {
-            const filePath = path.join(MARKET_DATA_DIR, file)
+            const filePath = path.join(AGGREGATED_MARKET_DATA_DIR, file)
             try {
-                const marketData = await parseCsvMarketData(filePath)
+                const marketData = await parseCsvMarketData(filePath, START_PERIOD_TIME, END_PERIOD_TIME)
                 // Process data in chunks to avoid stack overflow
                 const CHUNK_SIZE = 10000
                 for (let i = 0; i < marketData.length; i += CHUNK_SIZE) {
@@ -100,7 +105,6 @@ async function getHistoricalMarketData() {
         if (allMarketData.length === 0) throw new Error('No valid market data found for the specified time range')
         
         logger.info(`Finished processing all market data. Total trades: ${allMarketData.length}`)
-        
         return allMarketData
     } catch (error) {
         logger.error(`Failed to process market data: ${error.message}`)

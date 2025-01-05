@@ -5,7 +5,7 @@ import unzip from 'extract-zip'
 import { createHash } from 'crypto'
 import logger from '../../utils/logger.js'
 import { padNumber } from '../../utils/utils.js'
-import { MARKET, PAIR_NAME, START_DATE, END_DATE, MARKET_DATA_DIR } from '../config.js'
+import { MARKET, PAIR_NAME, START_DATE, END_DATE, RAW_MARKET_DATA_DIR, BASE_MARKET_DATA_DIR } from '../config.js'
 
 // Create base URL for Binance data
 const getBinanceUrl = (market, symbol, year, month, day) => {
@@ -45,7 +45,7 @@ async function validateChecksum(zipPath, checksumPath) {
 // Extract zip file and delete it afterwards
 async function extractZipFile(zipPath) {
   logger.info(`Extracting ${zipPath}`)
-  await unzip(zipPath, { dir: MARKET_DATA_DIR })
+  await unzip(zipPath, { dir: RAW_MARKET_DATA_DIR })
   await fs.promises.unlink(zipPath)
   logger.info(`Extracted ${zipPath}`)
 }
@@ -78,18 +78,19 @@ function getDateRange(startDate, endDate) {
 
 // Main download function
 async function downloadMarketData(market, pairName, startDate, endDate) {
-  // Create market data directory if it doesn't exist
-  if (!fs.existsSync(MARKET_DATA_DIR)) {
-    fs.mkdirSync(MARKET_DATA_DIR)
+  // Create market data directories if they don't exist
+  for (const dir of [BASE_MARKET_DATA_DIR, RAW_MARKET_DATA_DIR]) {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+    }
   }
 
   const symbol = pairName.replace('/', '')
-
   const dates = getDateRange(startDate, endDate)
 
   for (const { year, month, day } of dates) {
     const filePrefix = `${symbol}-aggTrades-${year}-${month}-${day}`
-    const csvPath = path.join(MARKET_DATA_DIR, `${filePrefix}.csv`)
+    const csvPath = path.join(RAW_MARKET_DATA_DIR, `${filePrefix}.csv`)
     
     // Skip if file already exists
     if (fs.existsSync(csvPath)) {
@@ -98,8 +99,8 @@ async function downloadMarketData(market, pairName, startDate, endDate) {
 
     try {
       const url = getBinanceUrl(market, symbol, year, month, day)
-      const zipPath = path.join(MARKET_DATA_DIR, `${filePrefix}.zip`)
-      const checksumPath = path.join(MARKET_DATA_DIR, `${filePrefix}.zip.CHECKSUM`)
+      const zipPath = path.join(RAW_MARKET_DATA_DIR, `${filePrefix}.zip`)
+      const checksumPath = path.join(RAW_MARKET_DATA_DIR, `${filePrefix}.zip.CHECKSUM`)
       
       await downloadFile(url, zipPath)
       await downloadFile(`${url}.CHECKSUM`, checksumPath)

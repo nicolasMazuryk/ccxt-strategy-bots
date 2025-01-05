@@ -84,11 +84,13 @@ const logger = winston.createLogger({
 })
 
 // Wrap logger methods to handle multiple parameters
+const formatArg = arg => typeof arg === 'object' ? JSON.stringify(arg, Object.getOwnPropertyNames(arg)) : arg
+
 const wrappedLogger = {
-    info: (...args) => logger.info(formatMultipleParams(...args)),
-    error: (...args) => logger.error(formatMultipleParams(...args)),
-    warn: (...args) => logger.warn(formatMultipleParams(...args)),
-    debug: (...args) => logger.debug(formatMultipleParams(...args))
+    info: (...args) => logger.info(args.map(formatArg).join(' ')),
+    error: (...args) => logger.error(args.map(formatArg).join(' ')),
+    warn: (...args) => logger.warn(args.map(formatArg).join(' ')),
+    debug: (...args) => logger.debug(args.map(formatArg).join(' '))
 }
 
 export default wrappedLogger

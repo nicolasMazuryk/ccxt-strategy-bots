@@ -4,7 +4,9 @@
 
 
 Backtester:
-- Manually aggregate trade data (each 0.25s on ETH/USDT)
+    - make sure it works well with 0.000000001 decimal assets
+    - incorrect time in new Date()
+    - test for Stablecoins 0.0001 decimal
 
 
 // TODO: research npm package for exchange emulation

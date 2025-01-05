@@ -67,7 +67,7 @@ async function runBacktest() {
         
         // return metrics
 
-        console.log('Done')
+        logger.info('Done')
 
     } catch (error) {
         logger.error('Backtest failed:', error)
