@@ -13,7 +13,7 @@ class BaseEmulator extends BaseExchange {
         this.makerFee = makerFee
     }
 
-    async fetchOrderBook(pairName) {
+    fetchOrderBook(pairName) {
         const price = this.currentPrices[pairName] || 0
         return {
             asks: [[price, 1]],
@@ -21,7 +21,7 @@ class BaseEmulator extends BaseExchange {
         }
     }
 
-    async createLimitBuyOrder(pairName, quantity, price) {
+    createLimitBuyOrder(pairName, quantity, price) {
         const orderId = ++this.lastOrderId
         const order = {
             id: orderId,
@@ -38,7 +38,7 @@ class BaseEmulator extends BaseExchange {
         return order
     }
 
-    async createLimitSellOrder(pairName, quantity, price) {
+    createLimitSellOrder(pairName, quantity, price) {
         const orderId = ++this.lastOrderId
         const order = {
             id: orderId,
@@ -55,7 +55,7 @@ class BaseEmulator extends BaseExchange {
         return order
     }
 
-    async createMarketBuyOrder(pairName, quantity) {
+    createMarketBuyOrder(pairName, quantity) {
         const orderId = ++this.lastOrderId
         const executionPrice = this.currentPrices[pairName]
         
@@ -76,7 +76,7 @@ class BaseEmulator extends BaseExchange {
         return order
     }
 
-    async createMarketSellOrder(pairName, quantity) {
+    createMarketSellOrder(pairName, quantity) {
         const orderId = ++this.lastOrderId
         const executionPrice = this.currentPrices[pairName]
         
@@ -134,23 +134,23 @@ class BaseEmulator extends BaseExchange {
         this.onOrderUpdate(order)
     }
 
-    async initializeWebSocket() {
+    initializeWebSocket() {
         logger.info(chalk.cyan('Initialized emulated WebSocket connection'))
     }
 
-    async subscribeToUserData() {
+    subscribeToUserData() {
         logger.info(chalk.cyan('Subscribed to emulated user data stream'))
     }
 
-    async subscribeToBookTicker(pairName) {
+    subscribeToBookTicker(pairName) {
         logger.info(chalk.cyan(`Subscribed to emulated book ticker for ${pairName}`))
     }
 
-    async closeAll() {
+    closeAll() {
         logger.info(chalk.cyan('Closing emulated websocket connection'))
     }
 
-    async cancelAllOrders(pairName) {
+    cancelAllOrders(pairName) {
         const canceledOrders = Array.from(this.orders.values()).filter(order => 
             order.pairName === pairName && order.orderStatus === 'NEW'
         )
@@ -165,7 +165,7 @@ class BaseEmulator extends BaseExchange {
         throw new Error('Method _executeOrder must be implemented')
     }
 
-    async fetchBalance() {
+    fetchBalance() {
         throw new Error('Method fetchBalance must be implemented')
     }
 }

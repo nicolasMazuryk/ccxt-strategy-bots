@@ -12,6 +12,7 @@ class GridBot {
         pricePrecision,
         isInfiniteGrid,
         exchange,
+        isBacktest = false
     }) {
         this.pairName = pairName
         this.lowerPrice = lowerPrice
@@ -28,6 +29,8 @@ class GridBot {
         this.gridInitializationBestAskPrice = 0
         this.isProcessingOrderbookBestBidAskUpdateEvent = false
         this.isShuttingDown = false
+
+        this.isBacktest = isBacktest
 
         logger.info(chalk.cyan(`Initializing ${this.exchange.marketType.toUpperCase()} Grid Bot for ${chalk.bold(pairName)}`))
         logger.info(chalk.cyan('Grid Parameters:'))
@@ -76,11 +79,13 @@ class GridBot {
             if (side === 'BUY') {
                 const sellPrice = this.toPrecision(parseFloat(price) + this.gridStep)
                 logger.info(chalk.cyan(`Placing corresponding SELL order @ ${chalk.yellow(sellPrice)}`))
-                await this.placeSellOrder(sellPrice)
+                if (this.isBacktest) this.placeSellOrder(sellPrice)
+                if (!this.isBacktest) await this.placeSellOrder(sellPrice)
             } else {
                 const buyPrice = this.toPrecision(parseFloat(price) - this.gridStep)
                 logger.info(chalk.cyan(`Placing corresponding BUY order @ ${chalk.yellow(buyPrice)}`))
-                await this.placeBuyOrder(buyPrice)
+                if (this.isBacktest) this.placeBuyOrder(buyPrice)
+                if (!this.isBacktest) await this.placeBuyOrder(buyPrice)
             }
         }
     }
@@ -101,7 +106,8 @@ class GridBot {
         for (const level of this.gridLevels) {
             if (level < askPrice && level >= this.gridInitializationBestAskPrice) {
                 logger.info(chalk.cyan(`New grid level: ${chalk.yellow(level)}`))
-                await this.placeBuyOrder(level)
+                if (this.isBacktest) this.placeBuyOrder(level)
+                if (!this.isBacktest) await this.placeBuyOrder(level)
             }
         }
 

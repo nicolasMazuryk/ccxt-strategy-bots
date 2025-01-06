@@ -18,7 +18,7 @@ async function initializeBacktestComponents(initialPrices) {
             makerFee: MAKER_FEE,
         })
 
-        const bot = new GridBot({ ...config, exchange })
+        const bot = new GridBot({ ...config, exchange, isBacktest: true })
         const engine = new BacktestEngine()
 
         await bot.start()
@@ -46,19 +46,15 @@ async function runBacktest() {
         logger.info('Initializing backtest components...')
         const { exchange, bot, engine } = await initializeBacktestComponents(initialPrices)
 
-
         logger.info('Processing market data...')
         
-
         const startTime = performance.now()
 
         for (const trade of marketData) {
-            exchange.processNewPrice(config.pairName, trade.price, trade.timestamp)
-            
+            exchange.processNewPrice(config.pairName, trade.price, trade.time)
+
             logger.info(`Counter (index): ${counter++}/${marketData.length - 1}`)
             
-            await new Promise(resolve => setTimeout(resolve, 0))
-
             // engine.recordEquityPoint(trade.timestamp, exchange)
         }
 

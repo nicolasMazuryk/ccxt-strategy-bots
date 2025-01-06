@@ -15,7 +15,7 @@ class SpotExchangeEmulator extends BaseEmulator {
         }
     }
 
-    async fetchBalance() {
+    fetchBalance() {
         return this.balance
     }
 

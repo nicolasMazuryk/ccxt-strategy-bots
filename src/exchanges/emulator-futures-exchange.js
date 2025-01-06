@@ -28,7 +28,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
         this.positions = {}
     }
 
-    async fetchBalance() {
+    fetchBalance() {
         return {
             info: {
                 totalMaintMargin: this.wallet.accountMaintenanceMargin.toFixed(8),
