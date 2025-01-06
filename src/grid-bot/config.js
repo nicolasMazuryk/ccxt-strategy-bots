@@ -20,14 +20,14 @@ const defaultConfig = {
     // isInfiniteGrid: false,
     // gridStep: 0.0001,
 
-    // pairName: 'ETH/USDT',
-    // lowerPrice: 3300,
-    // upperPrice: 3370,
-    // pricePrecision: 2,
-    // quantityPerGrid: 0.005,
-    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
-    // isInfiniteGrid: true,
-    // gridStep: 2,
+    pairName: 'ETH/USDT',
+    lowerPrice: 3300,
+    upperPrice: 3370,
+    pricePrecision: 2,
+    quantityPerGrid: 0.005,
+    marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    isInfiniteGrid: true,
+    gridStep: 2,
 
     // pairName: '1000SATS/USDT',
     // lowerPrice: 0.00017,
@@ -38,14 +38,14 @@ const defaultConfig = {
     // isInfiniteGrid: false,
     // gridStep: 0.0000005,
 
-    pairName: 'FDUSD/USDT',
-    lowerPrice: 0.9950,
-    upperPrice: 1.0050,
-    pricePrecision: 4,
-    quantityPerGrid: 100,
-    marketType: 'linear', // spot, margin, linear, inverse, option, funding
-    isInfiniteGrid: false,
-    gridStep: 0.0001,
+    // pairName: 'FDUSD/USDT',
+    // lowerPrice: 0.9950,
+    // upperPrice: 1.0050,
+    // pricePrecision: 4,
+    // quantityPerGrid: 100,
+    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    // isInfiniteGrid: false,
+    // gridStep: 0.0001,
 
     // ===============================
 

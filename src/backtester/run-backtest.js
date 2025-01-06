@@ -50,16 +50,22 @@ async function runBacktest() {
         logger.info('Processing market data...')
         
 
+        const startTime = performance.now()
+
         for (const trade of marketData) {
             exchange.processNewPrice(config.pairName, trade.price, trade.timestamp)
             
             logger.info(`Counter (index): ${counter++}/${marketData.length - 1}`)
             
-
             await new Promise(resolve => setTimeout(resolve, 0))
 
             // engine.recordEquityPoint(trade.timestamp, exchange)
         }
+
+        const endTime = performance.now()
+        const executionTime = (endTime - startTime) / 1000 // Convert to seconds
+        logger.info(`Total execution time: ${executionTime.toFixed(2)} seconds`)
+        logger.info(`Average time per trade: ${(executionTime / marketData.length * 1000).toFixed(2)} ms`)
 
 
         // const metrics = engine.calculatePerformanceMetrics()
@@ -78,3 +84,9 @@ async function runBacktest() {
 
 runBacktest()
 
+
+/**
+ * [2025-01-06T12:19:15.077Z] INFO: Total execution time: 25.97 seconds
+ * [2025-01-06T12:19:15.077Z] INFO: Average time per trade: 1.40 ms
+ * 
+*/

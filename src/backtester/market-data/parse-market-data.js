@@ -2,7 +2,12 @@ import { parse } from 'csv-parse'
 import fs from 'fs'
 import path from 'path'
 import logger from '../../utils/logger.js'
-import { START_PERIOD_TIME, END_PERIOD_TIME, AGGREGATED_MARKET_DATA_DIR, RAW_MARKET_DATA_DIR } from '../config.js'
+import { 
+  START_PERIOD_TIME, 
+  END_PERIOD_TIME, 
+  SYMBOL_AGGREGATED_DATA_DIR,
+  SYMBOL_RAW_DATA_DIR
+} from '../config.js'
 
 async function parseCsvMarketData(dest, startPeriod = null, endPeriod = null) {
     logger.info(`Parsing CSV file: ${dest}`)
@@ -26,17 +31,20 @@ async function parseCsvMarketData(dest, startPeriod = null, endPeriod = null) {
                 wasBuyerMaker,
                 wasBestPriceMatch
             ]) => {
-                const tradeTimestampSec = Number(timestamp) > 10000000000 
-                    ? Math.floor(Number(timestamp) / 1000) 
-                    : Number(timestamp)
+
+                const timestampSec = Number(timestamp.toString().slice(0, 13))
 
                 const data = {
                     id: Number(aggregateTradeId),
                     price: Number(price), 
                     quantity: Number(quantity),
-                    timestamp: Number(timestamp),
-                    time: new Date(tradeTimestampSec),
+                    timestamp: timestampSec,
+                    time: new Date(timestampSec),
                     isBuyerTaker: String(wasBuyerMaker).toLowerCase() !== 'true'
+                }
+
+                if (data.time.getFullYear() < 2010 || data.time.getFullYear() > 2030) {
+                    throw new Error(`Invalid trade timestamp: ${data.time}. Year must be between 2010 and 2030`, data)
                 }
 
                 // return all data if no time range is provided
@@ -45,7 +53,7 @@ async function parseCsvMarketData(dest, startPeriod = null, endPeriod = null) {
                     return
                 }
 
-                if (tradeTimestampSec >= startTime && tradeTimestampSec <= endTime) {
+                if (timestampSec >= startTime && timestampSec <= endTime) {
                     marketData.push(data)
                 }
             })
@@ -67,7 +75,7 @@ async function getHistoricalMarketData() {
         const endDate = END_PERIOD_TIME.split('T')[0]
 
         // Get all CSV files from aggregated market data directory
-        const files = await fs.promises.readdir(AGGREGATED_MARKET_DATA_DIR)
+        const files = await fs.promises.readdir(SYMBOL_RAW_DATA_DIR)
         const csvFiles = files
             .filter(file => {
                 if (!file.endsWith('.csv')) return false
@@ -87,7 +95,7 @@ async function getHistoricalMarketData() {
         
         // Process each CSV file sequentially
         for (const file of csvFiles) {
-            const filePath = path.join(AGGREGATED_MARKET_DATA_DIR, file)
+            const filePath = path.join(SYMBOL_RAW_DATA_DIR, file)
             try {
                 const marketData = await parseCsvMarketData(filePath, START_PERIOD_TIME, END_PERIOD_TIME)
                 // Process data in chunks to avoid stack overflow

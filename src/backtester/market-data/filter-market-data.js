@@ -1,7 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 import logger from '../../utils/logger.js'
-import { PRICE_CROSSOVER_FILTER_INTERVAL, IS_STABLECOIN, RAW_MARKET_DATA_DIR, AGGREGATED_MARKET_DATA_DIR } from '../config.js'
+import { 
+  PRICE_CROSSOVER_FILTER_INTERVAL, 
+  IS_STABLECOIN, 
+  SYMBOL_RAW_DATA_DIR, 
+  SYMBOL_AGGREGATED_DATA_DIR, 
+  AGGREGATED_MARKET_DATA_DIR 
+} from '../config.js'
 import { parseCsvMarketData } from './parse-market-data.js'
 
 function filterPriceLevelCrossovers(marketData, priceInterval, isStablecoin = false) {
@@ -59,9 +65,12 @@ async function filterAllMarketData(priceInterval, isStablecoin) {
         if (!fs.existsSync(AGGREGATED_MARKET_DATA_DIR)) {
             fs.mkdirSync(AGGREGATED_MARKET_DATA_DIR, { recursive: true })
         }
+        if (!fs.existsSync(SYMBOL_AGGREGATED_DATA_DIR)) {
+            fs.mkdirSync(SYMBOL_AGGREGATED_DATA_DIR, { recursive: true })
+        }
 
         // Get all CSV files from raw directory
-        const files = await fs.promises.readdir(RAW_MARKET_DATA_DIR)
+        const files = await fs.promises.readdir(SYMBOL_RAW_DATA_DIR)
         const csvFiles = files.filter(file => file.endsWith('.csv'))
 
         if (csvFiles.length === 0) {
@@ -72,8 +81,8 @@ async function filterAllMarketData(priceInterval, isStablecoin) {
 
         // Process each file
         for (const file of csvFiles) {
-            const inputPath = path.join(RAW_MARKET_DATA_DIR, file)
-            const outputPath = path.join(AGGREGATED_MARKET_DATA_DIR, file)
+            const inputPath = path.join(SYMBOL_RAW_DATA_DIR, file)
+            const outputPath = path.join(SYMBOL_AGGREGATED_DATA_DIR, file)
 
             // Skip if output file already exists
             if (fs.existsSync(outputPath)) {

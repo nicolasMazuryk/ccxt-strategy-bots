@@ -1,12 +1,11 @@
 1. Make sure Lambda slack notification is working
 
 
+- Make backtester Grid Bot Syncronous (very long execution is time if asynchronous)
+
+- Build tool to measure range where price fluctuates most of the time (top-bottom 15% percentile)
 
 
-Backtester:
-    - make sure it works well with 0.000000001 decimal assets
-    - incorrect time in new Date()
-    - test for Stablecoins 0.0001 decimal
 
 
 // TODO: research npm package for exchange emulation
