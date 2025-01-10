@@ -75,7 +75,7 @@ async function getHistoricalMarketData() {
         const endDate = END_PERIOD_TIME.split('T')[0]
 
         // Get all CSV files from aggregated market data directory
-        const files = await fs.promises.readdir(SYMBOL_RAW_DATA_DIR)
+        const files = await fs.promises.readdir(SYMBOL_AGGREGATED_DATA_DIR)
         const csvFiles = files
             .filter(file => {
                 if (!file.endsWith('.csv')) return false
@@ -92,10 +92,10 @@ async function getHistoricalMarketData() {
         logger.info(`Found ${csvFiles.length} CSV files within date range to process`)
 
         const allMarketData = []
-        
+                
         // Process each CSV file sequentially
         for (const file of csvFiles) {
-            const filePath = path.join(SYMBOL_RAW_DATA_DIR, file)
+            const filePath = path.join(SYMBOL_AGGREGATED_DATA_DIR, file)
             try {
                 const marketData = await parseCsvMarketData(filePath, START_PERIOD_TIME, END_PERIOD_TIME)
                 // Process data in chunks to avoid stack overflow

@@ -1,4 +1,4 @@
-import { BaseEmulator } from './base-emulator.js'
+import { BaseEmulator } from './emulator-base.js'
 import logger from '../utils/logger.js'
 import chalk from 'chalk'
 import { LEVERAGE } from '../backtester/config.js'
@@ -51,8 +51,23 @@ class FuturesExchangeEmulator extends BaseEmulator {
         }
     }
 
-    processNewPrice(pairName, price, time) {
-        super.processNewPrice(pairName, price, time)
+    fetchTrades() {
+        return super.fetchTrades()
+    }
+
+    getClosedAndOpenTrades() {
+        return super.getClosedAndOpenTrades()
+    }
+
+    fetchWallet() {
+        return {
+            wallet: { ...this.wallet },
+            positions: { ...this.positions }
+        }
+    }
+
+    processNewPrice(pairName, price, timestamp) {
+        super.processNewPrice(pairName, price, timestamp)
 
         if (this._checkLiquidation(pairName, price)) return
 
@@ -76,7 +91,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
         }
     }
 
-    _executeOrder(order, executionPrice, time) {
+    _executeOrder(order, executionPrice, timestamp) {
         const [_, quoteAsset] = order.pairName.split('/')
         
         this._initializePositionIfNotExists(order.pairName)
@@ -95,7 +110,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
         this._updateWallet(position, executionPrice, orderDetails.feeCost)
         this._logPositionUpdate(position, oldPosition, quoteAsset, order.pairName)
         
-        this._updateOrderAfterExecution(order, time, orderDetails.cost, orderDetails.fee, quoteAsset)
+        this._updateOrderAfterExecution(order, timestamp, orderDetails.cost, orderDetails.fee, quoteAsset, realizedPnl)
         this._updatePositionPnL(order.pairName, executionPrice)
     }
 

@@ -1,4 +1,4 @@
-import { BaseEmulator } from './base-emulator.js'
+import { BaseEmulator } from './emulator-base.js'
 import logger from '../utils/logger.js'
 import chalk from 'chalk'
 
@@ -17,6 +17,10 @@ class SpotExchangeEmulator extends BaseEmulator {
 
     fetchBalance() {
         return this.balance
+    }
+
+    fetchTrades() {
+        return super.fetchTrades()
     }
 
     _executeOrder(order, executionPrice, time) {
