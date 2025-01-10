@@ -1,5 +1,10 @@
 1. Make sure Lambda slack notification is working
 
+Profile Futures Exchange Performance (spot - 4 sec, linear - 40 sec)
+    - remove info logs (except result logs) - 2x faster
+
+Check Infinity Mode - move up and drop down below initial lower level - should remove bottom levels
+
 Backtest: Flatten the Closed/Open trades to be consistent
 
 Use timestamp instead of time in order/trade objects

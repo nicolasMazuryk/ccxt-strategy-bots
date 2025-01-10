@@ -137,7 +137,10 @@ class GridBot {
 
     async placeBuyOrder(price) {
         try {
-            const order = await this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price)
+            const order = this.isBacktest
+                ? this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price)
+                : await this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price)
+            
             logger.info(chalk.green(`Successfully placed BUY order @ ${price}`))
             return order
         } catch (error) {
@@ -147,7 +150,10 @@ class GridBot {
 
     async placeSellOrder(price) {
         try {
-            const order = await this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price)
+            const order = this.isBacktest
+                ? this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price)
+                : await this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price)
+            
             logger.info(chalk.green(`Successfully placed SELL order: ${this.quantityPerGrid} @ ${price}`))
             return order
         } catch (error) {

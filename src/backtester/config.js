@@ -43,7 +43,7 @@ const MAINTENANCE_MARGIN_RATE = 0.0065 // https://www.binance.com/en/futures/tra
 
 const INITIAL_BALANCES = {
     USDT: 1000,
-    // ETH: 1,
+    ETH: 1,
     FDUSD: 0,
     // AMB: 0,
     // ACT: 0,

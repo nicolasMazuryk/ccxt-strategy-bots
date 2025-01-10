@@ -97,7 +97,7 @@ class MetricsFormatter {
                 sections.push({
                     title: `Position Metrics - ${pairName}`,
                     metrics: [
-                        ['Max Position Size', this.formatNumber(posMetrics.maxPositionSize, 4), ''],
+                        ['Max Position Size', this.formatNumber(posMetrics.maxPositionSize, 4), pairName.split('/')[0]],
                         ['Max Position Value', this.formatCurrency(posMetrics.maxPositionValue), ''],
                         ['Max Liquidation Distance', this.formatPercentage(posMetrics.maxLiquidationDistance), '']
                     ]

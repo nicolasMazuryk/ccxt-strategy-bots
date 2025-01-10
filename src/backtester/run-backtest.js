@@ -23,7 +23,10 @@ async function initializeBacktestComponents(marketData) {
         })
 
         const bot = new GridBot({ ...config, exchange, isBacktest: true })
-        const engine = new BacktestEngine({ initialEquity: INITIAL_BALANCES.USDT, exchange, marketData })
+        
+        const engine = config.marketType === 'linear' ? 
+            new BacktestEngine({ initialEquity: INITIAL_BALANCES.USDT, exchange, marketData }) :
+            null
         
         await bot.start()
 
@@ -52,19 +55,19 @@ async function runBacktest() {
         for (const trade of marketData) {
             exchange.processNewPrice(config.pairName, trade.price, trade.timestamp)
 
-            engine.recordEquityPoint(trade.price, trade.timestamp)
-
+            if (engine) engine.recordEquityPoint(trade.price, trade.timestamp)
+                
             // logger.debug(`Counter (index): ${counter++}/${marketData.length - 1}`)
         }
 
-        const metrics = engine.calculatePerformanceMetrics()
-
-        engine.logResults(metrics)
-
-        await engine.saveResults(config.pairName, metrics)
+        if (engine) {
+            const metrics = engine.calculatePerformanceMetrics()
+            engine.logResults(metrics)
+            await engine.saveResults(config.pairName, metrics)
+        }
 
         const endTime = performance.now()
-        const executionTime = (endTime - startTime) / 1000 // Convert to seconds
+        const executionTime = (endTime - startTime) / 1000
         logger.info(`Total execution time: ${executionTime.toFixed(2)} seconds`)
         logger.info(`Average time per trade: ${(executionTime / marketData.length * 1000).toFixed(2)} ms`)
     } catch (error) {
