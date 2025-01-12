@@ -6,7 +6,7 @@ class BaseEmulator extends BaseExchange {
     constructor({ marketType, takerFee, makerFee, initialPrices }) {
         super(marketType)
         this.currentPrices = { ...initialPrices } || {}
-        this.currentTime = null
+        this.currentTimestamp = null
         this.lastOrderId = 0
         this.orders = []
         this.trades = []
@@ -54,7 +54,7 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'LIMIT',
-            time: this.currentTime
+            timestamp: this.currentTimestamp
         }
         this.orders.push(order)
         logger.info(chalk.cyan(`Place BUY order: ${quantity} @ ${price} for ${pairName}`))
@@ -71,7 +71,7 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'LIMIT',
-            time: this.currentTime
+            timestamp: this.currentTimestamp
         }
         this.orders.push(order)
         logger.info(chalk.cyan(`Place SELL order: ${quantity} @ ${price} for ${pairName}`))
@@ -90,11 +90,11 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'MARKET',
-            time: this.currentTime
+            timestamp: this.currentTimestamp
         }
         
         this.orders.push(order)
-        this._executeOrder(order, executionPrice, this.currentTime)
+        this._executeOrder(order, executionPrice, this.currentTimestamp)
         
         return order
     }
@@ -111,18 +111,18 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'MARKET',
-            time: this.currentTime
+            timestamp: this.currentTimestamp
         }
         
         this.orders.push(order)
-        this._executeOrder(order, executionPrice, this.currentTime)
+        this._executeOrder(order, executionPrice, this.currentTimestamp)
         
         return order
     }
 
     processNewPrice(pairName, price, timestamp) {
         this.currentPrices[pairName] = price
-        this.currentTime = timestamp
+        this.currentTimestamp = timestamp
 
         this._matchOrders(pairName, price, timestamp)
 
@@ -135,21 +135,21 @@ class BaseEmulator extends BaseExchange {
         })
     }
 
-    _matchOrders(pairName, price, time) {
+    _matchOrders(pairName, price, timestamp) {
         this.orders
             .filter(order => order.orderStatus === 'NEW' && order.pairName === pairName)
             .forEach(order => {
                 if (order.side === 'BUY' && price < order.price) {
-                    this._executeOrder(order, order.price, time)
+                    this._executeOrder(order, order.price, timestamp)
                 } else if (order.side === 'SELL' && price > order.price) {
-                    this._executeOrder(order, order.price, time)
+                    this._executeOrder(order, order.price, timestamp)
                 }
             })
     }
 
-    _updateOrderAfterExecution(order, time, cost, fee, quoteAsset, realizedPnL = 0) {
+    _updateOrderAfterExecution(order, timestamp, cost, fee, quoteAsset, realizedPnL = 0) {
         order.orderStatus = 'FILLED'
-        order.executionTime = time
+        order.executionTimestamp = timestamp
         order.cost = cost
         order.commission = cost * fee
         order.commissionAsset = quoteAsset
@@ -183,7 +183,7 @@ class BaseEmulator extends BaseExchange {
                     
                     exitTrade: trade,
                     exitPrice: trade.price,
-                    exitTimestamp: trade.executionTime,
+                    exitTimestamp: trade.executionTimestamp,
                     
                     realizedPnL: openTrade.realizedPnL + trade.realizedPnL,
                     commission: openTrade.commission + trade.commission,
@@ -198,7 +198,7 @@ class BaseEmulator extends BaseExchange {
                     
                     entryTrade: trade,
                     entryPrice: trade.price,
-                    entryTimestamp: trade.executionTime,
+                    entryTimestamp: trade.executionTimestamp,
                     
                     realizedPnL: trade.realizedPnL,
                     commission: trade.commission,
@@ -218,7 +218,7 @@ class BaseEmulator extends BaseExchange {
                     
                     exitTrade: trade,
                     exitPrice: trade.price,
-                    exitTimestamp: trade.executionTime,
+                    exitTimestamp: trade.executionTimestamp,
                     
                     realizedPnL: openTrade.realizedPnL + trade.realizedPnL,
                     commission: openTrade.commission + trade.commission,
@@ -233,7 +233,7 @@ class BaseEmulator extends BaseExchange {
                     
                     entryTrade: trade,
                     entryPrice: trade.price,
-                    entryTimestamp: trade.executionTime,
+                    entryTimestamp: trade.executionTimestamp,
                     
                     realizedPnL: trade.realizedPnL,
                     commission: trade.commission,
@@ -291,7 +291,7 @@ class BaseEmulator extends BaseExchange {
     }
 
     // Abstract methods that must be implemented by spot/futures classes
-    _executeOrder(order, executionPrice, time) {
+    _executeOrder(order, executionPrice, timestamp) {
         throw new Error('Method _executeOrder must be implemented')
     }
 

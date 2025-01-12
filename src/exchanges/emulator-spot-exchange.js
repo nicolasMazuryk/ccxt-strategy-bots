@@ -23,7 +23,7 @@ class SpotExchangeEmulator extends BaseEmulator {
         return super.fetchTrades()
     }
 
-    _executeOrder(order, executionPrice, time) {
+    _executeOrder(order, executionPrice, timestamp) {
         const [baseAsset, quoteAsset] = order.pairName.split('/')
         const cost = order.quantity * executionPrice
         const fee = order.type === 'MARKET' ? this.takerFee : this.makerFee
@@ -38,7 +38,7 @@ class SpotExchangeEmulator extends BaseEmulator {
                 this.balance[baseAsset].total += order.quantity
                 
                 this._logBalanceUpdate(order.side, order.pairName, baseAsset, quoteAsset)
-                this._updateOrderAfterExecution(order, time, cost, fee, quoteAsset)
+                this._updateOrderAfterExecution(order, timestamp, cost, fee, quoteAsset)
             } else {
                 this._rejectOrder(order, `Insufficient ${quoteAsset} balance. Required: ${totalCost}, Available: ${this.balance[quoteAsset].free}`)
             }
@@ -54,7 +54,7 @@ class SpotExchangeEmulator extends BaseEmulator {
                 this.balance[baseAsset].total -= order.quantity
                 
                 this._logBalanceUpdate(order.side, order.pairName, baseAsset, quoteAsset)
-                this._updateOrderAfterExecution(order, time, cost, fee, quoteAsset)
+                this._updateOrderAfterExecution(order, timestamp, cost, fee, quoteAsset)
             } else {
                 this._rejectOrder(order, `Insufficient ${baseAsset} balance. Required: ${order.quantity}, Available: ${this.balance[baseAsset].free}`)
             }

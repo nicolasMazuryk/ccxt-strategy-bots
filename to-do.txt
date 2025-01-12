@@ -3,8 +3,6 @@
 
 
 
-Use timestamp instead of time in order/trade objects
-
 
 
 - Build tool to measure range where price fluctuates most of the time (top-bottom 15% percentile)

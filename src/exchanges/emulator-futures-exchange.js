@@ -310,10 +310,10 @@ class FuturesExchangeEmulator extends BaseEmulator {
                 side: position.positionAmount > 0 ? 'SELL' : 'BUY',
                 quantity: Math.abs(position.positionAmount),
                 type: 'MARKET',
-                time: this.currentTime
+                timestamp: this.currentTimestamp
             }
 
-            this._executeOrder(liquidationOrder, currentPrice, this.currentTime)
+            this._executeOrder(liquidationOrder, currentPrice, this.currentTimestamp)
         }
     }
 
