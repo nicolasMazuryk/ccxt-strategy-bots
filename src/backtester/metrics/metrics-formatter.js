@@ -30,6 +30,8 @@ class MetricsFormatter {
                 metrics: [
                     ['Equity', this.formatCurrency(m.equity.absolute), this.formatPercentage(m.equity.percentage)],
                     ['Net Profit', this.formatCurrency(m.netProfit.absolute), this.formatPercentage(m.netProfit.percentage)],
+                    ['Realized P&L', this.formatCurrency(m.realizedPnL.absolute), this.formatPercentage(m.realizedPnL.percentage)],
+                    ['Unrealized P&L', this.formatCurrency(m.unrealizedPnL.absolute), this.formatPercentage(m.unrealizedPnL.percentage)],
                     ['Gross Profit', this.formatCurrency(m.grossProfit.absolute), this.formatPercentage(m.grossProfit.percentage)],
                     ['Gross Loss', this.formatCurrency(m.grossLoss.absolute), this.formatPercentage(m.grossLoss.percentage)],
                     ['Buy & Hold Return', this.formatCurrency(m.buyAndHoldReturn.absolute), this.formatPercentage(m.buyAndHoldReturn.percentage)],

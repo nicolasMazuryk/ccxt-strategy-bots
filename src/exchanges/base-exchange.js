@@ -56,6 +56,10 @@ class BaseExchange {
     async createMarketSellOrder(symbol, amount) {
         throw new Error('createMarketSellOrder method must be implemented by the exchange')
     }
+
+    async cancelOrdersBelowPrice(symbol, price) {
+        throw new Error('cancelOrdersBelowPrice method must be implemented by the exchange')
+    }
 }
 
 export { BaseExchange }

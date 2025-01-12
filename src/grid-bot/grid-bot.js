@@ -101,7 +101,8 @@ class GridBot {
 
         logger.info(chalk.cyan(`Market price update - New best ask: ${chalk.yellow(askPrice)}`))
 
-        this.handleInfiniteGrid(askPrice)
+        if (this.isBacktest) this.handleInfiniteGrid(askPrice)
+        if (!this.isBacktest) await this.handleInfiniteGrid(askPrice)
 
         for (const level of this.gridLevels) {
             if (level < askPrice && level >= this.gridInitializationBestAskPrice) {
@@ -115,13 +116,19 @@ class GridBot {
         this.isProcessingOrderbookBestBidAskUpdateEvent = false
     }
 
-    handleInfiniteGrid(askPrice) {
+    async handleInfiniteGrid(askPrice) {
         if (this.isInfiniteGrid && askPrice > this.upperPrice) {
             logger.info(chalk.yellow('Price exceeded upper boundary, adjusting infinite grid...'))
             
             while (askPrice > this.upperPrice) {
                 const lowestLevel = this.gridLevels.shift()
                 logger.info(chalk.yellow(`Removing lowest grid level: ${lowestLevel}`))
+
+                const canceledOrders = this.isBacktest ? 
+                this.exchange.cancelOrdersBelowPrice(this.pairName, lowestLevel) : 
+                await this.exchange.cancelOrdersBelowPrice(this.pairName, lowestLevel)
+
+                if (canceledOrders.length > 0) logger.info(chalk.cyan(`Canceled ${canceledOrders.length} orders below price: ${lowestLevel}`))
 
                 const newHighestLevel = this.toPrecision(this.gridLevels[this.gridLevels.length - 1] + this.gridStep)
                 this.gridLevels.push(newHighestLevel)

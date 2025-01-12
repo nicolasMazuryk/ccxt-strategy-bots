@@ -135,6 +135,16 @@ class BinanceExchange extends BaseExchange {
     async createMarketSellOrder(symbol, amount) {
         return this.exchange.createMarketSellOrder(symbol, amount)
     }
+
+    async cancelOrdersBelowPrice(symbol, price) {
+        const openOrders = await this.exchange.fetchOpenOrders(symbol)
+
+        const ordersToCancel = openOrders.filter(order => parseFloat(order.price) <= price)
+
+        const canceledOrders = await Promise.all(ordersToCancel.map(order => this.exchange.cancelOrder(order.id, symbol)))
+
+        return canceledOrders
+    }
 }
 
 export { BinanceExchange }

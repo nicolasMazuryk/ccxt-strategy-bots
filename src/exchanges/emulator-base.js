@@ -221,6 +221,22 @@ class BaseEmulator extends BaseExchange {
         }
     }
 
+    cancelOrdersBelowPrice(pairName, price) {
+        const canceledOrders = this.orders.filter(order => 
+            order.pairName === pairName && 
+            order.orderStatus === 'NEW' &&
+            order.price <= price
+        )
+        
+        this.orders = this.orders.filter(order => 
+            order.pairName !== pairName || 
+            order.orderStatus !== 'NEW' ||
+            order.price > price
+        )
+        
+        return canceledOrders
+    }
+
     cancelAllOrders(pairName) {
         // Find orders to cancel
         const canceledOrders = this.orders.filter(order => 

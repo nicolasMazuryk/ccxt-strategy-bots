@@ -27,6 +27,10 @@ class MetricsCalculator {
         const netProfit = finalEquity - this.initialEquity
         const netProfitPercent = (netProfit / this.initialEquity) * 100
 
+        // Calculate realized and unrealized PnL
+        const realizedPnL = this.trades.reduce((sum, trade) => sum + trade.realizedPnL, 0)
+        const unrealizedPnL = netProfit - realizedPnL
+
         // Calculate gross profit and loss
         const profitableTrades = this.trades.filter(trade => trade.realizedPnL > 0)
         const unprofitableTrades = this.trades.filter(trade => trade.realizedPnL < 0)
@@ -56,6 +60,14 @@ class MetricsCalculator {
             netProfit: {
                 absolute: netProfit,
                 percentage: netProfitPercent
+            },
+            realizedPnL: {
+                absolute: realizedPnL,
+                percentage: (realizedPnL / this.initialEquity) * 100
+            },
+            unrealizedPnL: {
+                absolute: unrealizedPnL,
+                percentage: (unrealizedPnL / this.initialEquity) * 100
             },
             grossProfit: {
                 absolute: grossProfit,

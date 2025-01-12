@@ -3,8 +3,6 @@
 
 
 
-Check Infinity Mode - move up and drop down below initial lower level - should remove bottom levels
-
 Backtest: Flatten the Closed/Open trades to be consistent
 
 Use timestamp instead of time in order/trade objects
