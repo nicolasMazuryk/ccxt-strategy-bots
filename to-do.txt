@@ -3,8 +3,6 @@
 
 
 
-Backtest: Flatten the Closed/Open trades to be consistent
-
 Use timestamp instead of time in order/trade objects
 
 

@@ -180,14 +180,16 @@ class BacktestEngine {
 
         const tradesPath = path.join(outputDir, `${symbol}-trades.csv`)
         const tradeHeaders = [
-            'entryTimestamp',
-            'exitTimestamp',
-            'positionType',
+            'pairName',
+            'positionType', 
+            'status',
             'entryPrice',
             'exitPrice',
+            'entryTimestamp',
+            'exitTimestamp',
             'realizedPnL',
             'commission',
-            'status'
+            'dust'
         ]
 
         await fs.promises.writeFile(

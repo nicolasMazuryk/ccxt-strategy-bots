@@ -12,8 +12,8 @@ class BaseEmulator extends BaseExchange {
         this.trades = []
         this.closedTrades = []
         this.openTrades = {
-            longEntries: [],  // BUY trades for LONG positions
-            shortEntries: [], // SELL trades for SHORT positions
+            long: {},  // BUY trades for LONG positions
+            short: {}, // SELL trades for SHORT positions
         }
         this.takerFee = takerFee
         this.makerFee = makerFee
@@ -32,9 +32,15 @@ class BaseEmulator extends BaseExchange {
     }
 
     getClosedAndOpenTrades() {
+        // Flatten all open trades from both long and short positions
+        const allOpenTrades = [
+            ...Object.values(this.openTrades.long).flat(),
+            ...Object.values(this.openTrades.short).flat()
+        ].sort((a, b) => b.entryTimestamp - a.entryTimestamp)
+
         return {
             closedTrades: this.closedTrades,
-            openTrades: [...this.openTrades.longEntries, ...this.openTrades.shortEntries].sort((a, b) => b.executionTime - a.executionTime)
+            openTrades: allOpenTrades
         }
     }
 
@@ -48,7 +54,6 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'LIMIT',
-            realizedPnL: 0,
             time: this.currentTime
         }
         this.orders.push(order)
@@ -66,7 +71,6 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'LIMIT',
-            realizedPnL: 0,
             time: this.currentTime
         }
         this.orders.push(order)
@@ -86,7 +90,6 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'MARKET',
-            realizedPnL: 0,
             time: this.currentTime
         }
         
@@ -108,7 +111,6 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'MARKET',
-            realizedPnL: 0,
             time: this.currentTime
         }
         
@@ -151,72 +153,93 @@ class BaseEmulator extends BaseExchange {
         order.cost = cost
         order.commission = cost * fee
         order.commissionAsset = quoteAsset
-        order.realizedPnL = realizedPnL
 
-        this.trades.push({ ...order })
-        this._matchNewTrade(order)
+        const trade = { ...order, realizedPnL }
+
+        this.trades.push(trade)
+        this._matchNewTrade(trade)
 
         this.onOrderUpdate(order)
     }
 
     _matchNewTrade(trade) {
+        // Initialize arrays for this pair if they don't exist
+        if (!this.openTrades.long[trade.pairName]) {
+            this.openTrades.long[trade.pairName] = []
+        }
+        if (!this.openTrades.short[trade.pairName]) {
+            this.openTrades.short[trade.pairName] = []
+        }
+
         if (trade.side === 'BUY') {
-            if (this.openTrades.shortEntries.length > 0) {
+            const openShorts = this.openTrades.short[trade.pairName]
+            
+            if (openShorts.length > 0) {
                 // Close SHORT position (LIFO)
-                const matchingShort = this.openTrades.shortEntries.pop()
-                this.closedTrades.push({
-                    entryTrade: matchingShort,
+                const openTrade = openShorts.pop()
+
+                this.closedTrades.push(Object.assign(openTrade, {
+                    status: 'CLOSED',
+                    
                     exitTrade: trade,
-                    entryTimestamp: matchingShort.executionTime,
-                    exitTimestamp: trade.executionTime,
-                    entryPrice: matchingShort.price,
                     exitPrice: trade.price,
-                    realizedPnL: matchingShort.realizedPnL + trade.realizedPnL,
-                    commission: (matchingShort.commission || 0) + (trade.commission || 0),
-                    positionType: 'SHORT',
-                    status: 'CLOSED'
-                })
+                    exitTimestamp: trade.executionTime,
+                    
+                    realizedPnL: openTrade.realizedPnL + trade.realizedPnL,
+                    commission: openTrade.commission + trade.commission,
+                    dust: openTrade.entryTrade.quantity - trade.quantity,
+                }))
             } else {
                 // Open LONG position
                 const openTrade = {
-                    ...trade,
-                    entryTimestamp: trade.executionTime,
-                    exitTimestamp: '',
-                    positionType: 'LONG',
+                    pairName: trade.pairName,
+                    positionType: 'LONG', 
+                    status: 'OPEN',
+                    
+                    entryTrade: trade,
                     entryPrice: trade.price,
-                    exitPrice: '',
-                    status: 'OPEN'
+                    entryTimestamp: trade.executionTime,
+                    
+                    realizedPnL: trade.realizedPnL,
+                    commission: trade.commission,
+                    dust: 0
                 }
-                this.openTrades.longEntries.push(openTrade)
+                this.openTrades.long[trade.pairName].push(openTrade)
             }
         } else if (trade.side === 'SELL') {
-            if (this.openTrades.longEntries.length > 0) {
+            const openLongs = this.openTrades.long[trade.pairName]
+            
+            if (openLongs.length > 0) {
                 // Close LONG position (LIFO)
-                const matchingLong = this.openTrades.longEntries.pop()
-                this.closedTrades.push({
-                    entryTrade: matchingLong,
+                const openTrade = openLongs.pop()
+
+                this.closedTrades.push(Object.assign(openTrade, {
+                    status: 'CLOSED',
+                    
                     exitTrade: trade,
-                    entryTimestamp: matchingLong.executionTime,
-                    exitTimestamp: trade.executionTime,
-                    entryPrice: matchingLong.price,
                     exitPrice: trade.price,
-                    realizedPnL: matchingLong.realizedPnL + trade.realizedPnL,
-                    commission: (matchingLong.commission || 0) + (trade.commission || 0),
-                    positionType: 'LONG',
-                    status: 'CLOSED'
-                })
+                    exitTimestamp: trade.executionTime,
+                    
+                    realizedPnL: openTrade.realizedPnL + trade.realizedPnL,
+                    commission: openTrade.commission + trade.commission,
+                    dust: openTrade.entryTrade.quantity - trade.quantity,
+                }))
             } else {
                 // Open SHORT position
                 const openTrade = {
-                    ...trade,
-                    entryTimestamp: trade.executionTime,
-                    exitTimestamp: '',
+                    pairName: trade.pairName,
                     positionType: 'SHORT',
+                    status: 'OPEN',
+                    
+                    entryTrade: trade,
                     entryPrice: trade.price,
-                    exitPrice: '',
-                    status: 'OPEN'
+                    entryTimestamp: trade.executionTime,
+                    
+                    realizedPnL: trade.realizedPnL,
+                    commission: trade.commission,
+                    dust: 0
                 }
-                this.openTrades.shortEntries.push(openTrade)
+                this.openTrades.short[trade.pairName].push(openTrade)
             }
         }
     }
