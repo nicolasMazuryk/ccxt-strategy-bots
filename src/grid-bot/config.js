@@ -4,7 +4,7 @@
 
 const riskConfig = {
     gridNumber: 50,
-    investedAmount: 1250,
+    investedAmount: 1000,
     leverage: 5,
     tradingFee: 0.0000,
     maintenanceMarginRate: 0.0065
@@ -25,7 +25,7 @@ const defaultConfig = {
     upperPrice: 3370,
     pricePrecision: 2,
     quantityPerGrid: 0.005,
-    marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    marketType: 'spot', // spot, margin, linear, inverse, option, funding
     isInfiniteGrid: true,
     gridStep: 2,
 

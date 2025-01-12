@@ -70,6 +70,7 @@ async function runBacktest() {
         const executionTime = (endTime - startTime) / 1000
         logger.info(`Total execution time: ${executionTime.toFixed(2)} seconds`)
         logger.info(`Average time per trade: ${(executionTime / marketData.length * 1000).toFixed(2)} ms`)
+        logger.info(`Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`)
     } catch (error) {
         logger.error('Backtest failed:', error)
         logger.error(`Failed at index ${counter}`)

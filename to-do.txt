@@ -1,7 +1,7 @@
 1. Make sure Lambda slack notification is working
 
-Profile Futures Exchange Performance (spot - 4 sec, linear - 40 sec)
-    - remove info logs (except result logs) - 2x faster
+
+
 
 Check Infinity Mode - move up and drop down below initial lower level - should remove bottom levels
 
@@ -9,9 +9,7 @@ Backtest: Flatten the Closed/Open trades to be consistent
 
 Use timestamp instead of time in order/trade objects
 
-Backtest-engine for Spot Exchange
 
-- Equity curve visualization
 
 - Build tool to measure range where price fluctuates most of the time (top-bottom 15% percentile)
 
@@ -20,6 +18,8 @@ Backtest-engine for Spot Exchange
 --------------------------------
 1. Confirm upper level only once FULL grid level is reached (reason of Taker Fee)
 2. Backtest: Max Price Drawdown % from the top and bottom of the grid
+3. Backtest:Equity curve visualization
+4. Backtest-engine for Spot Exchange
 
 
 

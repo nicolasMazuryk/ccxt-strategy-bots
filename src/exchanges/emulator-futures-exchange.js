@@ -226,7 +226,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
         if (realizedPnl) {
             this.wallet.balance += realizedPnl
             
-            logger.info(chalk.green(
+            logger.debug(chalk.green(
                 `[PnL] Realized: ${realizedPnl} USDT`
                 + `\n      Fees: ${feeCost} USDT`
                 + `\n      Net: ${realizedPnl - feeCost} USDT`
@@ -238,7 +238,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
     }
 
     _logPositionUpdate(position, oldPosition, quoteAsset, pairName) {
-        logger.info(chalk.blue(
+        logger.debug(chalk.blue(
             `[Position] Update for ${pairName}:`
             + `\n          Size: ${position.positionAmount} (was: ${oldPosition.positionAmount})`
             + `\n          Entry: ${position.entryPrice} (was: ${oldPosition.entryPrice})`
@@ -258,7 +258,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
         this._updateWallet(position, currentPrice)
         
         if (Math.abs(position.unrealizedPnL - oldPnL) > 0.01) {
-            logger.info(chalk.yellow(
+            logger.debug(chalk.yellow(
                 `[PnL] Update for ${pairName}: ${position.unrealizedPnL} USDT`
                 + `\n      Price: ${currentPrice}`
                 + `\n      Liquidation Price: ${position.liquidationPrice}`

@@ -34,6 +34,8 @@ const IS_STABLECOIN = false
 // ===== BACKTEST =====
 const START_PERIOD_TIME = '2024-12-30T00:00:00+00:00'
 const END_PERIOD_TIME = '2025-01-01T23:59:00+00:00'
+// const START_PERIOD_TIME = '2024-12-30T00:00:00+00:00'
+// const END_PERIOD_TIME = '2024-12-30T02:00:00+00:00'
 
 const TAKER_FEE = 0.000 // 0.1%
 const MAKER_FEE = 0.000 // 0.1%
@@ -42,7 +44,7 @@ const LEVERAGE = 5
 const MAINTENANCE_MARGIN_RATE = 0.0065 // https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin
 
 const INITIAL_BALANCES = {
-    USDT: 1000,
+    USDT: 2000,
     ETH: 1,
     FDUSD: 0,
     // AMB: 0,

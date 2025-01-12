@@ -8,7 +8,7 @@ class BaseEmulator extends BaseExchange {
         this.currentPrices = { ...initialPrices } || {}
         this.currentTime = null
         this.lastOrderId = 0
-        this.orders = new Map()
+        this.orders = []
         this.trades = []
         this.closedTrades = []
         this.openTrades = {
@@ -48,9 +48,10 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'LIMIT',
+            realizedPnL: 0,
             time: this.currentTime
         }
-        this.orders.set(orderId, order)
+        this.orders.push(order)
         logger.info(chalk.cyan(`Place BUY order: ${quantity} @ ${price} for ${pairName}`))
         return order
     }
@@ -65,9 +66,10 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'LIMIT',
+            realizedPnL: 0,
             time: this.currentTime
         }
-        this.orders.set(orderId, order)
+        this.orders.push(order)
         logger.info(chalk.cyan(`Place SELL order: ${quantity} @ ${price} for ${pairName}`))
         return order
     }
@@ -84,10 +86,11 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'MARKET',
+            realizedPnL: 0,
             time: this.currentTime
         }
         
-        this.orders.set(orderId, order)
+        this.orders.push(order)
         this._executeOrder(order, executionPrice, this.currentTime)
         
         return order
@@ -105,10 +108,11 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'MARKET',
+            realizedPnL: 0,
             time: this.currentTime
         }
         
-        this.orders.set(orderId, order)
+        this.orders.push(order)
         this._executeOrder(order, executionPrice, this.currentTime)
         
         return order
@@ -130,15 +134,15 @@ class BaseEmulator extends BaseExchange {
     }
 
     _matchOrders(pairName, price, time) {
-        for (const [orderId, order] of this.orders.entries()) {
-            if (order.orderStatus !== 'NEW' || order.pairName !== pairName) continue
-
-            if (order.side === 'BUY' && price < order.price) {
-                this._executeOrder(order, order.price, time)
-            } else if (order.side === 'SELL' && price > order.price) {
-                this._executeOrder(order, order.price, time)
-            }
-        }
+        this.orders
+            .filter(order => order.orderStatus === 'NEW' && order.pairName === pairName)
+            .forEach(order => {
+                if (order.side === 'BUY' && price < order.price) {
+                    this._executeOrder(order, order.price, time)
+                } else if (order.side === 'SELL' && price > order.price) {
+                    this._executeOrder(order, order.price, time)
+                }
+            })
     }
 
     _updateOrderAfterExecution(order, time, cost, fee, quoteAsset, realizedPnL = 0) {
@@ -218,12 +222,16 @@ class BaseEmulator extends BaseExchange {
     }
 
     cancelAllOrders(pairName) {
-        const canceledOrders = Array.from(this.orders.values()).filter(order => 
+        // Find orders to cancel
+        const canceledOrders = this.orders.filter(order => 
             order.pairName === pairName && order.orderStatus === 'NEW'
         )
-        this.orders = new Map([...this.orders].filter(([_, order]) => 
+        
+        // Update remaining orders
+        this.orders = this.orders.filter(order => 
             order.pairName !== pairName || order.orderStatus !== 'NEW'
-        ))
+        )
+        
         return canceledOrders
     }
 
