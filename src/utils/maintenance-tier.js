@@ -21,8 +21,12 @@ const TIERED_MAINTENANCE = {
     ],
 }
 
+const DEFAULT_MAINTENANCE_RATE = 0.0065
+
 const getMaintenanceRate = (pairName, notional) => {
     const tiers = TIERED_MAINTENANCE[pairName]
+    if (!tiers) return DEFAULT_MAINTENANCE_RATE
+    
     for (const tier of tiers) {
         if (notional <= tier.notionalCap) return tier.rate
     }

@@ -365,7 +365,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
             this.wallet.balance += cost // If long, cost will be negative, so wallet balance decreases
             this.wallet.cummulativeFunding += cost
 
-            logger.info(chalk.magenta(
+            logger.debug(chalk.magenta(
               `[Funding] Applied for ${pairName}: ${cost} USDT (rate: ${fundingRate * 100}%)`
               + `\n           New Balance: ${this.wallet.balance} USDT`
             ))

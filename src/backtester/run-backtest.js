@@ -7,6 +7,7 @@ import logger from '../utils/logger.js'
 import { config } from '../grid-bot/config.js'
 import { TAKER_FEE, MAKER_FEE, INITIAL_BALANCES } from './config.js'
 import { setupGracefulShutdown } from '../utils/graceful-shotdown.js'
+import { updateProgressBar } from '../utils/progress-bar.js'
 
 async function initializeBacktestComponents(marketData) {
     try {
@@ -56,14 +57,20 @@ async function runBacktest() {
             exchange.processNewPrice(config.pairName, trade.price, trade.timestamp)
 
             if (engine) engine.recordEquityPoint(trade.price, trade.timestamp)
-                
-            // logger.debug(`Counter (index): ${counter++}/${marketData.length - 1}`)
+
+            // Progress bar
+            counter++
+            const progress = updateProgressBar(counter, marketData.length)
+            
+            if (progress.shouldUpdate) {
+                logger.info(`Progress: [${progress.progressBar}] ${progress.percentage}% (${progress.counter}/${progress.total})`)
+            }
         }
 
         if (engine) {
             const metrics = engine.calculatePerformanceMetrics()
             engine.logResults(metrics)
-            await engine.saveResults(config.pairName, metrics)
+            // await engine.saveResults(config.pairName, metrics)
         }
 
         const endTime = performance.now()

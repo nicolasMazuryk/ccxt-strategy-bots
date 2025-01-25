@@ -1,0 +1,143 @@
+Best performing settings:
+22.00% (APR)
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0000,
+    upperPrice: 1.0019,
+    quantityPerGrid: 50,
+    gridStep: 0.0002,
+
+26.60% (APR)
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0000,
+    upperPrice: 1.0039,
+    quantityPerGrid: 50,
+    gridStep: 0.0002,
+
+27.11% (APR)
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0000,
+    upperPrice: 1.0019,
+    quantityPerGrid: 100,
+    gridStep: 0.0002,
+
+33.75%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0000,
+    upperPrice: 1.0029,
+    quantityPerGrid: 100,
+    gridStep: 0.0003,
+
+35.67%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0000,
+    upperPrice: 1.0031,
+    quantityPerGrid: 125,
+    gridStep: 0.0004,
+
+38.09%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0000,
+    upperPrice: 1.0029,
+    quantityPerGrid: 166,
+    gridStep: 0.0005,
+
+41.87%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0005,
+    upperPrice: 1.0034,
+    quantityPerGrid: 166,
+    gridStep: 0.0005,
+
+43.00%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0010,
+    upperPrice: 1.0039,
+    quantityPerGrid: 166,
+    gridStep: 0.0005,
+
+42.93%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0005,
+    upperPrice: 1.0034,
+    quantityPerGrid: 200,
+    gridStep: 0.0006,
+
+41.41%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0005,
+    upperPrice: 1.0036,
+    quantityPerGrid: 250,
+    gridStep: 0.0008,
+
+47.32%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0010,
+    upperPrice: 1.0031,
+    quantityPerGrid: 333,
+    gridStep: 0.0008,
+
+47.17%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0010,
+    upperPrice: 1.0041,
+    quantityPerGrid: 250,
+    gridStep: 0.0008,
+
+45.10%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0005,
+    upperPrice: 1.0044,
+    quantityPerGrid: 250,
+    gridStep: 0.0010,
+
+
+ONE TRADE GRID
+--------------------------------
+36.70%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0005,
+    upperPrice: 1.0020,
+    quantityPerGrid: 1000,
+    gridStep: 0.0020,
+
+36.05%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0005,
+    upperPrice: 1.0015,
+    quantityPerGrid: 1000,
+    gridStep: 0.0015,
+
+41.89%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0010,
+    upperPrice: 1.0020,
+    quantityPerGrid: 1000,
+    gridStep: 0.0020,
+
+44.85%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0010,
+    upperPrice: 1.0015,
+    quantityPerGrid: 1000,
+    gridStep: 0.0015,
+
+42.38%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0010,
+    upperPrice: 1.0015,
+    quantityPerGrid: 1000,
+    gridStep: 0.0025,
+
+46.37%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0010,
+    upperPrice: 1.0015,
+    quantityPerGrid: 1000,
+    gridStep: 0.0030,
+
+48.17%
+    pairName: 'USDP/USDT',
+    lowerPrice: 1.0010,
+    upperPrice: 1.0015,
+    quantityPerGrid: 1000,
+    gridStep: 0.0035,

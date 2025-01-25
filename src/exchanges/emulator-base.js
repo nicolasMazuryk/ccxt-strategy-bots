@@ -57,7 +57,7 @@ class BaseEmulator extends BaseExchange {
             timestamp: this.currentTimestamp
         }
         this.orders.push(order)
-        logger.info(chalk.cyan(`Place BUY order: ${quantity} @ ${price} for ${pairName}`))
+        logger.debug(chalk.cyan(`Place BUY order: ${quantity} @ ${price} for ${pairName}`))
         return order
     }
 
@@ -74,7 +74,7 @@ class BaseEmulator extends BaseExchange {
             timestamp: this.currentTimestamp
         }
         this.orders.push(order)
-        logger.info(chalk.cyan(`Place SELL order: ${quantity} @ ${price} for ${pairName}`))
+        logger.debug(chalk.cyan(`Place SELL order: ${quantity} @ ${price} for ${pairName}`))
         return order
     }
 

@@ -4,10 +4,12 @@ import { dirname } from 'path'
 
 // ===== DOWNLOAD =====
 const MARKET = 'spot'
-const PAIR_NAME = 'ETH/USDT'
+const PAIR_NAME = 'USDC/USDT'
+// const PAIR_NAME = 'MINA/USDT'
 
-const START_DATE = '2025-01-01'
-const END_DATE = '2025-01-01'
+const START_DATE = '2021-09-10' // USDP/USDT market data availability
+// const START_DATE = '2024-01-01'
+const END_DATE = '2024-01-01'
 // =========================
 
 const SYMBOL = PAIR_NAME.replace('/', '')
@@ -23,30 +25,35 @@ const SYMBOL_AGGREGATED_DATA_DIR = path.join(AGGREGATED_MARKET_DATA_DIR, SYMBOL)
 const BACKTEST_RESULTS_DIR = path.join(BASE_BACKTESTER_DIR, 'backtest-results')
 // ===== FILTER =====
 
-const PRICE_CROSSOVER_FILTER_INTERVAL = 0.25
-const IS_STABLECOIN = false
+const PRICE_CROSSOVER_FILTER_INTERVAL = 0.0001
+const IS_STABLECOIN = true
 
 // ===== DEVELOPMENT =====
 // Etalon testing period
 // const START_PERIOD_TIME = '2025-01-01T00:00:00+00:00'
 // const END_PERIOD_TIME = '2025-01-01T00:59:00+00:00'
 
-// ===== BACKTEST =====
-const START_PERIOD_TIME = '2024-12-30T00:00:00+00:00'
-const END_PERIOD_TIME = '2025-01-01T23:59:00+00:00'
 // const START_PERIOD_TIME = '2024-12-30T00:00:00+00:00'
-// const END_PERIOD_TIME = '2024-12-30T02:00:00+00:00'
+// const END_PERIOD_TIME = '2025-01-01T23:59:00+00:00'
 
-const TAKER_FEE = 0.000 // 0.1%
-const MAKER_FEE = 0.000 // 0.1%
+// ===== BACKTEST =====
+// const START_PERIOD_TIME = '2023-02-01T00:00:00+00:00'
+// const END_PERIOD_TIME = '2023-02-28T23:59:00+00:00'
 
-const LEVERAGE = 5
-const MAINTENANCE_MARGIN_RATE = 0.0065 // https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin
+const START_PERIOD_TIME = '2024-07-01T00:00:00+00:00'
+const END_PERIOD_TIME = '2024-09-30T23:59:00+00:00'
+
+const TAKER_FEE = 0.0000 // 0.1%
+const MAKER_FEE = 0.0000 // 0.1%
+
+const LEVERAGE = 2
+// const MAINTENANCE_MARGIN_RATE = 0.0065 // https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin
 
 const INITIAL_BALANCES = {
-    USDT: 2000,
+    USDT: 1000,
     ETH: 1,
     FDUSD: 0,
+    USDP: 0,
     // AMB: 0,
     // ACT: 0,
     // BNB: 0
@@ -70,7 +77,7 @@ export {
     TAKER_FEE,
     MAKER_FEE,
     LEVERAGE,
-    MAINTENANCE_MARGIN_RATE,
+    // MAINTENANCE_MARGIN_RATE,
     INITIAL_BALANCES,
     PRICE_CROSSOVER_FILTER_INTERVAL,
     IS_STABLECOIN

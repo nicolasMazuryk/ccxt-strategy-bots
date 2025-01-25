@@ -62,7 +62,7 @@ class SpotExchangeEmulator extends BaseEmulator {
     }
 
     _logBalanceUpdate(side, pairName, baseAsset, quoteAsset) {
-        logger.info(chalk.blue(
+        logger.debug(chalk.blue(
             `[Balance] After ${side} ${pairName}:`
             + Object.entries(this.balance)
                 .filter(([asset]) => [baseAsset, quoteAsset].includes(asset))

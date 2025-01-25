@@ -1,7 +1,23 @@
 1. Make sure Lambda slack notification is working
 
+2. Build your own retry mechanism for failed Binance order requests
+3. Add STOP-LOSS and TAKE-PROFIT parameters. Additionally, If WS orderUpdate receives either StopLoss or TakeProfit (that can be set manually via UI or API), then trigger bot.stop()
+4. SIGINT (graceful shutdown) Futures doesn't SELL remainder (close the position)
+5. make sure "Required capital for grid: 341.70 USDT" and Number of grids are the same in Grid Risk Calculator and in the Bot
 
 
+
+---- Kateryna: check her Binance borrowing USDP/USDT isolated margin
+
+- Infinite backtesting period. Get monthly data and clear array and store data. At the end: sum up. (can't backtest yearly periods)
+- Infinite grid with trailing 5% below the highest high. Trailing Stop-Loss respectively.
+
+REAL BACKTESTING
+
+
+
+Add maxDrawdown/maxRunup by price to statistics
+Add backtesting period in days to statistics (16 days, 5h)
 
 
 
@@ -29,5 +45,50 @@ Visualization:
 - Equity Curve
 - Drawdown
 - Buy & Hold Equity
+
+
+FDUSD/USDT
+FDUSD/USDC 
+TUSD/USDT
+USDT/DAI
+USDC/USDT
+
+
+
+
+
+------- GRID PAIRS ------- 
+AMB/USDT
+MINA/USDT
+
+- BTC/USDT
+- ETH/USDT
+
+- MATIC/USDT
+- LRC/USDT
+- LTC/USDT
+- SOL/BTC
+
+- RIF/USDT
+- TRU/USDT
+- MASK/USDT
+- ONT/USDT
+- TRV/USDT (bybit)
+- WAVES/USDT
+
+- OKB/USDT - Gold Standard -> constantly rising (we need LONG to be profitable), with some ranges
+
+- USTC/USDT
+- FIL/USDT
+- TIA/USDT
+- OP/USDT
+
+
+
+
+------- PAIR TRADING ------- 
+
+- ETH & ETC
+
 
 

@@ -4,9 +4,9 @@
 
 const riskConfig = {
     gridNumber: 50,
-    investedAmount: 1000,
-    leverage: 5,
-    tradingFee: 0.0000,
+    investedAmount: 250,
+    leverage: 8,
+    tradingFee: 0.0002,
     maintenanceMarginRate: 0.0065
 }
 
@@ -20,14 +20,23 @@ const defaultConfig = {
     // isInfiniteGrid: true,
     // gridStep: 0.0001,
 
-    pairName: 'ETH/USDT',
-    lowerPrice: 3300,
-    upperPrice: 3370,
-    pricePrecision: 2,
-    quantityPerGrid: 0.005,
-    marketType: 'linear', // spot, margin, linear, inverse, option, funding
-    isInfiniteGrid: true,
-    gridStep: 2,
+    // pairName: 'ETH/FDUSD',
+    // lowerPrice: 2000,
+    // upperPrice: 4000,
+    // pricePrecision: 2,
+    // quantityPerGrid: 0.005,
+    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    // isInfiniteGrid: false,
+    // gridStep: 10,
+
+    // pairName: 'MINA/USDT',
+    // lowerPrice: 0.3500,
+    // upperPrice: 1.6000,
+    // pricePrecision: 4,
+    // quantityPerGrid: 5,
+    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    // isInfiniteGrid: false,
+    // gridStep: 0.0063,
 
     // pairName: '1000SATS/USDT',
     // lowerPrice: 0.00017,
@@ -38,52 +47,61 @@ const defaultConfig = {
     // isInfiniteGrid: false,
     // gridStep: 0.0000005,
 
-    // pairName: 'FDUSD/USDT',
-    // lowerPrice: 0.9950,
-    // upperPrice: 1.0050,
-    // pricePrecision: 4,
-    // quantityPerGrid: 100,
-    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    // pairName: 'USDP/USDT',
+    // lowerPrice: 1.0005,
+    // upperPrice: 1.0044,
+    // quantityPerGrid: 249,
+    // gridStep: 0.0010,
+    // marketType: 'spot', // spot, margin, linear, inverse, option, funding
     // isInfiniteGrid: false,
-    // gridStep: 0.0001,
+    // pricePrecision: 4,
+
+    pairName: 'USDC/USDT',
+    lowerPrice: 1.0005,
+    upperPrice: 1.0044,
+    quantityPerGrid: 1000,
+    gridStep: 0.0050,
+    marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    isInfiniteGrid: false,
+    pricePrecision: 4,
 
     // ===============================
 
-    // pairName: 'FDUSD/USDT',
-    // lowerPrice: 0.9950,
-    // upperPrice: 1.0050,
-    // pricePrecision: 4,
-    // quantityPerGrid: 6,
+    // pairName: 'USDP/USDT',
+    // lowerPrice: 1.0005,
+    // upperPrice: 1.0044,
+    // quantityPerGrid: 249,
+    // gridStep: 0.0010,
     // marketType: 'spot', // spot, margin, linear, inverse, option, funding
     // isInfiniteGrid: false,
-    // gridStep: 0.0001,
+    // pricePrecision: 4,
 
     // pairName: 'ETH/FDUSD',
-    // lowerPrice: 3200,
-    // upperPrice: 3350,
+    // lowerPrice: 3100,
+    // upperPrice: 3600,
     // pricePrecision: 2,
     // quantityPerGrid: 0.002,
     // marketType: 'spot', // spot, margin, linear, inverse, option, funding
     // isInfiniteGrid: true,
-    // gridStep: 3,
+    // gridStep: 10,
 
     // pairName: 'AMB/USDT',
-    // lowerPrice: 0.0066,
-    // upperPrice: 0.0081,
+    // lowerPrice: 0.0065,
+    // upperPrice: 0.0095,
     // pricePrecision: 7,
     // quantityPerGrid: 800,
     // marketType: 'linear', // spot, margin, linear, inverse, option, funding
     // isInfiniteGrid: false,
-    // gridStep: 0.000015,
+    // gridStep: 0.0000273,
 
     // pairName: 'ETH/USDT',
-    // lowerPrice: 3200,
-    // upperPrice: 3350,
+    // lowerPrice: 3100,
+    // upperPrice: 3600,
     // pricePrecision: 2,
-    // quantityPerGrid: 0.0063,
+    // quantityPerGrid: 0.0075,
     // marketType: 'linear', // spot, margin, linear, inverse, option, funding
     // isInfiniteGrid: true,
-    // gridStep: 3,
+    // gridStep: 10,
 
     apiKey: process.env.BINANCE_API_KEY,
     apiSecret: process.env.BINANCE_API_SECRET

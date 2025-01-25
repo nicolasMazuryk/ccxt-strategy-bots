@@ -74,16 +74,16 @@ class GridBot {
         const price = order.price || order.originalPrice
         
         if (orderStatus === 'FILLED') {
-            logger.info(chalk.green(`Order filled - ${side} @ ${price}`))
+            logger.debug(chalk.green(`Order filled - ${side} @ ${price}`))
 
             if (side === 'BUY') {
                 const sellPrice = this.toPrecision(parseFloat(price) + this.gridStep)
-                logger.info(chalk.cyan(`Placing corresponding SELL order @ ${chalk.yellow(sellPrice)}`))
+                logger.debug(chalk.cyan(`Placing corresponding SELL order @ ${chalk.yellow(sellPrice)}`))
                 if (this.isBacktest) this.placeSellOrder(sellPrice)
                 if (!this.isBacktest) await this.placeSellOrder(sellPrice)
             } else {
                 const buyPrice = this.toPrecision(parseFloat(price) - this.gridStep)
-                logger.info(chalk.cyan(`Placing corresponding BUY order @ ${chalk.yellow(buyPrice)}`))
+                logger.debug(chalk.cyan(`Placing corresponding BUY order @ ${chalk.yellow(buyPrice)}`))
                 if (this.isBacktest) this.placeBuyOrder(buyPrice)
                 if (!this.isBacktest) await this.placeBuyOrder(buyPrice)
             }
@@ -99,14 +99,14 @@ class GridBot {
 
         this.isProcessingOrderbookBestBidAskUpdateEvent = true
 
-        logger.info(chalk.cyan(`Market price update - New best ask: ${chalk.yellow(askPrice)}`))
+        logger.debug(chalk.cyan(`Market price update - New best ask: ${chalk.yellow(askPrice)}`))
 
         if (this.isBacktest) this.handleInfiniteGrid(askPrice)
         if (!this.isBacktest) await this.handleInfiniteGrid(askPrice)
 
         for (const level of this.gridLevels) {
             if (level < askPrice && level >= this.gridInitializationBestAskPrice) {
-                logger.info(chalk.cyan(`New grid level: ${chalk.yellow(level)}`))
+                logger.debug(chalk.cyan(`New grid level: ${chalk.yellow(level)}`))
                 if (this.isBacktest) this.placeBuyOrder(level)
                 if (!this.isBacktest) await this.placeBuyOrder(level)
             }
@@ -118,26 +118,26 @@ class GridBot {
 
     async handleInfiniteGrid(askPrice) {
         if (this.isInfiniteGrid && askPrice > this.upperPrice) {
-            logger.info(chalk.yellow('Price exceeded upper boundary, adjusting infinite grid...'))
+            logger.debug(chalk.yellow('Price exceeded upper boundary, adjusting infinite grid...'))
             
             while (askPrice > this.upperPrice) {
                 const lowestLevel = this.gridLevels.shift()
-                logger.info(chalk.yellow(`Removing lowest grid level: ${lowestLevel}`))
+                logger.debug(chalk.yellow(`Removing lowest grid level: ${lowestLevel}`))
 
                 const canceledOrders = this.isBacktest ? 
                 this.exchange.cancelOrdersBelowPrice(this.pairName, lowestLevel) : 
                 await this.exchange.cancelOrdersBelowPrice(this.pairName, lowestLevel)
 
-                if (canceledOrders.length > 0) logger.info(chalk.cyan(`Canceled ${canceledOrders.length} orders below price: ${lowestLevel}`))
+                if (canceledOrders.length > 0) logger.debug(chalk.cyan(`Canceled ${canceledOrders.length} orders below price: ${lowestLevel}`))
 
                 const newHighestLevel = this.toPrecision(this.gridLevels[this.gridLevels.length - 1] + this.gridStep)
                 this.gridLevels.push(newHighestLevel)
-                logger.info(chalk.yellow(`Adding new highest grid level: ${newHighestLevel}`))
+                logger.debug(chalk.yellow(`Adding new highest grid level: ${newHighestLevel}`))
 
                 this.lowerPrice = this.gridLevels[0]
                 this.upperPrice = newHighestLevel
                 
-                logger.info(chalk.yellow(`New grid boundaries: ${this.lowerPrice} - ${this.upperPrice}`))
+                logger.debug(chalk.yellow(`New grid boundaries: ${this.lowerPrice} - ${this.upperPrice}`))
             }
         }
     }
@@ -148,7 +148,7 @@ class GridBot {
                 ? this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price)
                 : await this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price)
             
-            logger.info(chalk.green(`Successfully placed BUY order @ ${price}`))
+            logger.debug(chalk.green(`Successfully placed BUY order @ ${price}`))
             return order
         } catch (error) {
             logger.error(chalk.red(`Failed to place BUY order @ ${price}: ${error.message}`))
@@ -161,7 +161,7 @@ class GridBot {
                 ? this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price)
                 : await this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price)
             
-            logger.info(chalk.green(`Successfully placed SELL order: ${this.quantityPerGrid} @ ${price}`))
+            logger.debug(chalk.green(`Successfully placed SELL order: ${this.quantityPerGrid} @ ${price}`))
             return order
         } catch (error) {
             logger.error(chalk.red(`Failed to place SELL order @ ${price}: ${error.message}`))
