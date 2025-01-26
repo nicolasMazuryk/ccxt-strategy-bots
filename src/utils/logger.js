@@ -1,6 +1,8 @@
 import winston from 'winston'
 import chalk from 'chalk'
 
+const LOGGER_LEVEL = process.env.LOGGER_LEVEL || 'info'
+
 const formatMultipleParams = (...args) => {
     return args.map(arg => {
         if (typeof arg === 'object') {
@@ -13,7 +15,7 @@ const formatMultipleParams = (...args) => {
 const isVscodeDebugger = process.env.IS_VSCODE_DEBUGGER == 'true'
 
 const logger = winston.createLogger({
-    level: 'info',
+    level: LOGGER_LEVEL,
     format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.printf(({ level, message, timestamp }) => {

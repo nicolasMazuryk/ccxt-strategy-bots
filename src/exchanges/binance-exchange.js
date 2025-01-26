@@ -8,13 +8,11 @@ import {
 import logger from '../utils/logger.js'
 import chalk from 'chalk'
 import { BaseExchange } from './base-exchange.js'
+import { retry } from '../utils/retry.js'
 
 class BinanceExchange extends BaseExchange {
     constructor({ apiKey, apiSecret, marketType }) {
         super(marketType)
-        // this.marketType = marketType
-        // this.orderUpdateCallback = null
-        // this.priceUpdateCallback = null
 
         // Initialize WebSocket client
         this.wsClient = new WebsocketClient(
@@ -32,29 +30,18 @@ class BinanceExchange extends BaseExchange {
             apiKey: apiKey,
             secret: apiSecret,
         })
-
-        this.exchange.options['maxRetriesOnFailure'] = 300
-        this.exchange.options['maxRetriesOnFailureDelay'] = 2000
     }
 
-    // onOrderUpdate(callback) {
-    //     this.orderUpdateCallback = callback
-    // }
-
-    // onPriceUpdate(callback) {
-    //     this.priceUpdateCallback = callback
-    // }
-
     async createLimitBuyOrder(symbol, quantity, price) {
-        return this.exchange.createLimitBuyOrder(symbol, quantity, price)
+        return retry(async () => this.exchange.createLimitBuyOrder(symbol, quantity, price))
     }
 
     async createLimitSellOrder(symbol, quantity, price) {
-        return this.exchange.createLimitSellOrder(symbol, quantity, price)
+        return retry(async () => this.exchange.createLimitSellOrder(symbol, quantity, price))
     }
 
     async fetchOrderBook(symbol) {
-        return this.exchange.fetchOrderBook(symbol)
+        return retry(async () => this.exchange.fetchOrderBook(symbol))
     }
 
     async initializeWebSocket() {
@@ -125,23 +112,77 @@ class BinanceExchange extends BaseExchange {
     }
 
     async cancelAllOrders(symbol) {
-        return this.exchange.cancelAllOrders(symbol)
+        return retry(async () => this.exchange.cancelAllOrders(symbol))
     }
 
     async fetchBalance() {
-        return this.exchange.fetchBalance()
+        return retry(async () => this.exchange.fetchBalance())
     }
 
-    async createMarketSellOrder(symbol, amount) {
-        return this.exchange.createMarketSellOrder(symbol, amount)
+    async setLeverage(symbol, leverage) {
+        return retry(async () => this.exchange.setLeverage(leverage, symbol))
+    }
+
+    async createMarketBuyOrder(symbol, amount, params = {}) {
+        return retry(async () => this.exchange.createMarketBuyOrder(symbol, amount, params))
+    }
+
+    async createMarketSellOrder(symbol, amount, params = {}) {
+        return retry(async () => this.exchange.createMarketSellOrder(symbol, amount, params))
+    }
+
+    async createStopLossOrder(symbol, side, amount, stopPrice) {
+        try {
+            const order = await retry(async () => this.exchange.createStopLossOrder(
+                symbol,
+                'market',
+                side.toLowerCase(),
+                amount,
+                undefined,
+                stopPrice,
+                {
+                    reduceOnly: true
+                }
+            ))
+            logger.info(chalk.cyan(`Placed Stop-Loss order: ${order.type.toUpperCase()} ${side} ${chalk.yellow(amount)} ${symbol.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
+            return order
+        } catch (error) {
+            logger.error(chalk.red(`Failed to place Stop-Loss order: ${error.message}`))
+            throw error
+        }
+    }
+
+    async createTakeProfitOrder(symbol, side, amount, takeProfitPrice) {
+        try {
+            const order = await retry(async () => this.exchange.createTakeProfitOrder(
+                symbol,
+                'market',
+                side,
+                amount,
+                undefined,
+                takeProfitPrice,
+                {
+                    reduceOnly: true
+                }
+            ))
+            logger.info(chalk.cyan(`Placed Take-Profit order: ${order.type.toUpperCase()} ${side} ${chalk.yellow(amount)} ${symbol.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
+            return order
+        } catch (error) {
+            logger.error(chalk.red(`Failed to place Take-Profit order: ${error.message}`))
+            throw error
+        }
     }
 
     async cancelOrdersBelowPrice(symbol, price) {
-        const openOrders = await this.exchange.fetchOpenOrders(symbol)
+        const openOrders = await retry(async () => this.exchange.fetchOpenOrders(symbol))
 
         const ordersToCancel = openOrders.filter(order => parseFloat(order.price) <= price)
 
-        const canceledOrders = await Promise.all(ordersToCancel.map(order => this.exchange.cancelOrder(order.id, symbol)))
+        const canceledOrders = await Promise.all(
+            ordersToCancel.map(order => 
+                retry(async () => this.exchange.cancelOrder(order.id, symbol))
+            )
+        )
 
         return canceledOrders
     }

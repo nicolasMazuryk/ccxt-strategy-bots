@@ -1,9 +1,9 @@
 1. Make sure Lambda slack notification is working
 
-2. Build your own retry mechanism for failed Binance order requests
-3. Add STOP-LOSS and TAKE-PROFIT parameters. Additionally, If WS orderUpdate receives either StopLoss or TakeProfit (that can be set manually via UI or API), then trigger bot.stop()
-4. SIGINT (graceful shutdown) Futures doesn't SELL remainder (close the position)
-5. make sure "Required capital for grid: 341.70 USDT" and Number of grids are the same in Grid Risk Calculator and in the Bot
+
+
+
+6. Move try/catch and logging from grid-bot.js to binance-exchange.js
 
 
 
@@ -30,6 +30,9 @@ Add backtesting period in days to statistics (16 days, 5h)
 2. Backtest: Max Price Drawdown % from the top and bottom of the grid
 3. Backtest:Equity curve visualization
 4. Backtest-engine for Spot Exchange
+5. (if error appears) Handle CCXT RequestTimeout gracefully: https://docs.ccxt.com/#/README?id=requesttimeout
+6. SPOT: Error during shutdown while trying to Sell remaining dust 0.01 ACT at market price. Place market sell order only if it is greater than min_notional and min_quantity.
+8. Test FUTURES use case: whether enough leverage and margin in case default StopLoss and TakeProfit full reduceOnly grid quantity is reserved. Remove default StopLoss and TakeProfit if needed.
 
 
 

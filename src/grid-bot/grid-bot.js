@@ -1,6 +1,6 @@
 import logger from '../utils/logger.js'
 import chalk from 'chalk'
-import { formatNumberWithPrecision } from '../utils/utils.js'
+import { formatNumberWithPrecision, wait } from '../utils/utils.js'
 
 class GridBot {
     constructor({
@@ -11,8 +11,11 @@ class GridBot {
         quantityPerGrid,
         pricePrecision,
         isInfiniteGrid,
+        stopLoss,
+        takeProfit,
+        leverage,
         exchange,
-        isBacktest = false
+        isBacktest = false,
     }) {
         this.pairName = pairName
         this.lowerPrice = lowerPrice
@@ -32,19 +35,26 @@ class GridBot {
 
         this.isBacktest = isBacktest
 
+        this.stopLoss = stopLoss
+        this.takeProfit = takeProfit
+        this.leverage = leverage
+
         logger.info(chalk.cyan(`Initializing ${this.exchange.marketType.toUpperCase()} Grid Bot for ${chalk.bold(pairName)}`))
         logger.info(chalk.cyan('Grid Parameters:'))
         logger.info(chalk.cyan(`- Price Range: ${chalk.yellow(lowerPrice)} to ${chalk.yellow(upperPrice)}`))
         logger.info(chalk.cyan(`- Grid Step: ${chalk.yellow(gridStep)}`))
         logger.info(chalk.cyan(`- Quantity Per Grid: ${chalk.yellow(quantityPerGrid)}`))
         logger.info(chalk.cyan(`- Infinite Grid Mode: ${isInfiniteGrid ? chalk.green('Enabled') : chalk.red('Disabled')}`))
+
+        logger.info(chalk.cyan(`- Stop Loss: ${stopLoss ? chalk.yellow(stopLoss) : chalk.red('Disabled')}`))
+        logger.info(chalk.cyan(`- Take Profit: ${takeProfit ? chalk.yellow(takeProfit) : chalk.red('Disabled')}`))
     }
 
     generateGridLevels() {
         const levels = []
         let currentPrice = this.lowerPrice
         
-        while (currentPrice <= this.upperPrice) {
+        while (currentPrice < this.upperPrice) {
             levels.push(currentPrice)
             currentPrice = this.toPrecision(currentPrice + this.gridStep)
         }
@@ -54,26 +64,35 @@ class GridBot {
         return levels
     }
 
-    calculateTotalCapital() {
+    calculateCapitalAndQuantityTotals() {
+        const totalQuantity = this.gridLevels.length * this.quantityPerGrid
+
         const totalCapital = this.gridLevels.reduce((sum, price) => {
             return sum + (price * this.quantityPerGrid)
         }, 0)
 
-        const totalCapitalFormatted = Number(totalCapital).toFixed(2)
+        const totalMargin = this.exchange.marketType === 'linear' 
+            ? totalCapital / this.leverage 
+            : totalCapital
 
-        logger.info(chalk.cyan(`Required capital for grid: ${chalk.yellow(totalCapitalFormatted)} USDT`))
+        logger.info(chalk.cyan(`Total capital needed: ${chalk.yellow(Number(totalCapital).toFixed(2))} USDT`))
+        logger.info(chalk.cyan(`Required margin: ${chalk.yellow(Number(totalMargin).toFixed(2))} USDT`))
+        logger.info(chalk.cyan(`Total base quantity: ${chalk.yellow(Number(totalQuantity).toFixed(2))}`))
 
-        return totalCapitalFormatted
+        return { totalCapital, totalQuantity, totalMargin }
     }
 
     async handleOrderUpdate(order) {
         if (this.isShuttingDown) return
 
         const orderStatus = order.orderStatus
+        const orderType = order.orderType || order.type
         const side = order.side || order.orderSide
         const price = order.price || order.originalPrice
         
-        if (orderStatus === 'FILLED') {
+        if (!this.isBacktest) await this.checkStopLossAndTakeProfitOrder(order)
+
+        if (orderStatus === 'FILLED' && orderType === 'LIMIT') {
             logger.debug(chalk.green(`Order filled - ${side} @ ${price}`))
 
             if (side === 'BUY') {
@@ -94,6 +113,8 @@ class GridBot {
         if (this.isProcessingOrderbookBestBidAskUpdateEvent || this.isShuttingDown) return
 
         const askPrice = data.askPrice
+
+        if (!this.isBacktest) await this.checkStopLossAndTakeProfitLevels(askPrice)
 
         if (askPrice <= this.gridInitializationBestAskPrice) return
 
@@ -168,18 +189,52 @@ class GridBot {
         }
     }
 
+    async checkStopLossAndTakeProfitOrder(order) {
+        const orderType = order.type || order.orderType
+        const orderStatus = order.orderStatus
+
+        if (orderStatus === 'FILLED' || orderStatus === 'EXPIRED') {
+
+            if (['STOP', 'STOP_MARKET', 'STOP_LIMIT', 'STOP_LOSS', 'STOP_LOSS_MARKET', 'STOP_LOSS_LIMIT', 'TAKE_PROFIT', 'TAKE_PROFIT_MARKET', 'TAKE_PROFIT_LIMIT'].includes(orderType)) {
+                // TO-DO:change to warning once tested
+                logger.error(chalk.yellow(`[EXIT] ${orderType} order ${orderStatus} at price ${order.stopPrice}. Stopping bot...`))
+                await this.stop()
+            }
+        }
+    }
+
+    async checkStopLossAndTakeProfitLevels(price) {
+        if (this.stopLoss && price <= this.stopLoss) {
+            // TO-DO:change to warning once tested
+            logger.error(chalk.yellow(`[EXIT] Price ${price} hit STOP-LOSS level ${this.stopLoss}. Stopping bot...`))
+            await this.stop()
+        }
+
+        if (this.takeProfit && price >= this.takeProfit) {
+            // TO-DO:change to warning once tested
+            logger.error(chalk.yellow(`[EXIT] Price ${price} reached TAKE-PROFIT level ${this.takeProfit}. Stopping bot...`))
+            await this.stop()
+        }
+    }
+
     async initializeGrid() {
         try {
             logger.info(chalk.cyan('====== Initializing grid ======'))
-            
+
+            if (this.exchange.marketType === 'linear') {
+                if (this.isBacktest) this.exchange.setLeverage(this.pairName.replace('/', ''), this.leverage)
+                if (!this.isBacktest) await this.exchange.setLeverage(this.pairName.replace('/', ''), this.leverage)
+                logger.info(chalk.cyan(`Leverage set to ${this.leverage}x`))
+            }
+
             this.generateGridLevels()
-            const totalCapital = this.calculateTotalCapital()
+
+            const { totalCapital, totalQuantity } = this.calculateCapitalAndQuantityTotals()
 
             await this.exchange.initializeWebSocket()
             await this.exchange.subscribeToUserData()
 
-            // this.exchange.onOrderUpdate((order) => this.handleOrderUpdate(order))
-            // this.exchange.onPriceUpdate((data) => this.onOrderbookBestBidAskUpdateEvent(data))
+            if (!this.isBacktest) await wait(1000)
 
             this.exchange.onOrderUpdate = this.handleOrderUpdate.bind(this)
             this.exchange.onPriceUpdate = this.onOrderbookBestBidAskUpdateEvent.bind(this)
@@ -187,13 +242,18 @@ class GridBot {
             const orderbook = await this.exchange.fetchOrderBook(this.pairName)
             this.gridInitializationBestAskPrice = orderbook.asks[0][0]
 
-            logger.info(chalk.cyan(`Current market price (best ask): ${chalk.yellow(this.gridInitializationBestAskPrice)}`))
+            logger.info(chalk.cyan(`Current ${this.pairName} market price (best ask): ${chalk.yellow(this.gridInitializationBestAskPrice)}`))
             logger.info(chalk.cyan('Placing initial grid orders...'))
 
             for (const level of this.gridLevels) {
                 if (level < this.gridInitializationBestAskPrice) {
                     await this.placeBuyOrder(level)
                 }
+            }
+
+            if (!this.isBacktest && this.exchange.marketType === 'linear') {
+                if (this.stopLoss) await this.exchange.createStopLossOrder(this.pairName, 'SELL', totalQuantity, this.stopLoss)
+                if (this.takeProfit) await this.exchange.createTakeProfitOrder(this.pairName, 'SELL', totalQuantity, this.takeProfit)
             }
 
             await this.exchange.subscribeToBookTicker(this.pairName)
@@ -220,7 +280,9 @@ class GridBot {
     }
 
     async stop() {
+        if (this.isShuttingDown) return
         this.isShuttingDown = true
+
         logger.info(chalk.yellow('='.repeat(50)))
         logger.info(chalk.yellow('Initiating graceful shutdown'))
         logger.info(chalk.yellow('='.repeat(50)))
@@ -231,7 +293,7 @@ class GridBot {
 
             logger.info(chalk.yellow('Cancelling all open orders...'))
             const orders = await this.exchange.cancelAllOrders(this.pairName)
-            logger.info(chalk.green(`Successfully cancelled ${orders.length} orders`))
+            logger.info(chalk.green(`Successfully cancelled ${this.exchange.marketType === 'spot' ? orders.length : 'all'} orders`))
             
             const [baseAsset] = this.pairName.split('/')
             const balance = await this.exchange.fetchBalance()
@@ -240,8 +302,8 @@ class GridBot {
                 const baseBalance = balance[baseAsset]?.free
                 if (baseBalance && baseBalance > 0) {
                     logger.info(chalk.yellow(`Selling remaining ${baseBalance} ${baseAsset} at market price...`))
-                    await this.exchange.createMarketSellOrder(this.pairName, baseBalance)
-                    logger.info(chalk.green(`Successfully sold ${baseBalance} ${baseAsset}`))
+                    const exitOrder = await this.exchange.createMarketSellOrder(this.pairName, baseBalance)
+                    logger.info(chalk.green(`Successfully sold ${exitOrder.filled} ${baseAsset} at ${exitOrder.average}`))
                 }
             } else if (this.exchange.marketType === 'linear') {
                 const positions = balance.info.positions
@@ -250,14 +312,18 @@ class GridBot {
                 
                 if (position && positionAmount !== 0) {
                     logger.info(chalk.yellow(`Closing futures position of ${positionAmount} ${baseAsset}...`))
-                    await this.exchange.createMarketSellOrder(this.pairName, Math.abs(positionAmount))
-                    logger.info(chalk.green(`Successfully closed futures position of ${positionAmount} ${baseAsset}`))
+                    const exitOrder = positionAmount > 0 ? 
+                        await this.exchange.createMarketSellOrder(this.pairName, Math.abs(positionAmount), { reduceOnly: true }) : 
+                        await this.exchange.createMarketBuyOrder(this.pairName, Math.abs(positionAmount), { reduceOnly: true })
+                    logger.info(chalk.green(`Successfully closed futures position of ${exitOrder.filled} ${baseAsset} at ${exitOrder.average}`))
                 }
             }
 
             logger.info(chalk.yellow('='.repeat(50)))
             logger.info(chalk.yellow('Graceful shutdown complete'))
             logger.info(chalk.yellow('='.repeat(50)))
+
+            process.exit(0)
         } catch (error) {
             logger.error(chalk.red(`Error during shutdown: ${error.message}`))
         }

@@ -10,6 +10,7 @@ const gridRiskCalculator = ({
     lowerPrice,
     upperPrice,
     gridNumber,
+    gridStep,
     pricePrecision,
     tradingFee,
     maintenanceMarginRate,
@@ -17,12 +18,17 @@ const gridRiskCalculator = ({
     leverage,
     investedAmount,
 }) => {
-    if (gridNumber > 200) throw new Error('Grid number cannot exceed > 200')
-
     const toPrecision = formatNumberWithPrecision(pricePrecision)
     const gridLevels = []
 
-    const gridStep = toPrecision((upperPrice - lowerPrice) / gridNumber) // Price step in arithmetic mode
+    if (gridStep) {
+        gridNumber = Math.ceil((upperPrice - lowerPrice) / gridStep)
+    } else if (gridNumber) {
+        if (gridNumber > 195) throw new Error('Grid number cannot exceed > 195')
+        gridStep = toPrecision((upperPrice - lowerPrice) / gridNumber)
+    } else {
+        throw new Error('Either gridNumber or gridStep must be provided')
+    }
 
     // Generate the grid levels
     for (let i = 0; i < gridNumber; i++) {
@@ -74,7 +80,7 @@ const gridRiskCalculator = ({
     }
 
     // Calculate maximum drawdown
-    const maxDrawdown = Math.abs(unrealizedPnL + totalTradingFees)
+    const maxDrawdown = Math.abs(unrealizedPnL - totalTradingFees)
     const maxDrawdownPercent = (maxDrawdown / investedAmount) * 100
 
     // Calculate risk/reward ratio per grid
@@ -151,7 +157,7 @@ const gridRiskCalculator = ({
     logger.info(`Total Margin Required: ${chalk.yellow('$' + totalMarginRequired.toFixed(2))}`)
     logger.info(`Total Trading Fees: ${chalk.yellow('$' + totalTradingFees.toFixed(2))}`)
     logger.info(`Worst Case Unrealized P&L: ${chalk.red('$' + unrealizedPnL.toFixed(2))}`)
-    logger.info(`Maximum Drawdown: ${chalk.red('$' + maxDrawdown.toFixed(2))} (${chalk.red(maxDrawdownPercent.toFixed(2) + '%')})`)
+    logger.info(`Maximum Grid Drawdown: ${chalk.red('$' + maxDrawdown.toFixed(2))} (${chalk.red(maxDrawdownPercent.toFixed(2) + '%')})`)
     logger.info(`Risk/Reward Ratio per Grid: ${chalk.yellow(riskRewardRatio.toFixed(2))}`)
     logger.info(`Single Position Size: ${chalk.yellow(singlePositionSizePercent.toFixed(2) + '%')} of account`)
     logger.info(`Maximum Concurrent Positions: ${chalk.yellow(maxConcurrentPositions)}`)
@@ -168,7 +174,7 @@ const gridRiskCalculator = ({
     })
     logger.info(chalk.bold('========================\n'))
 
-    return { gridStep }
+    return { gridStep, gridNumber }
 }
 
 export { gridRiskCalculator }

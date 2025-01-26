@@ -4,7 +4,7 @@ import { dirname } from 'path'
 
 // ===== DOWNLOAD =====
 const MARKET = 'spot'
-const PAIR_NAME = 'USDC/USDT'
+const PAIR_NAME = 'ETH/USDT'
 // const PAIR_NAME = 'MINA/USDT'
 
 const START_DATE = '2021-09-10' // USDP/USDT market data availability
@@ -30,8 +30,8 @@ const IS_STABLECOIN = true
 
 // ===== DEVELOPMENT =====
 // Etalon testing period
-// const START_PERIOD_TIME = '2025-01-01T00:00:00+00:00'
-// const END_PERIOD_TIME = '2025-01-01T00:59:00+00:00'
+const START_PERIOD_TIME = '2025-01-01T00:00:00+00:00'
+const END_PERIOD_TIME = '2025-01-10T00:59:00+00:00'
 
 // const START_PERIOD_TIME = '2024-12-30T00:00:00+00:00'
 // const END_PERIOD_TIME = '2025-01-01T23:59:00+00:00'
@@ -40,13 +40,12 @@ const IS_STABLECOIN = true
 // const START_PERIOD_TIME = '2023-02-01T00:00:00+00:00'
 // const END_PERIOD_TIME = '2023-02-28T23:59:00+00:00'
 
-const START_PERIOD_TIME = '2024-07-01T00:00:00+00:00'
-const END_PERIOD_TIME = '2024-09-30T23:59:00+00:00'
+// const START_PERIOD_TIME = '2024-07-01T00:00:00+00:00'
+// const END_PERIOD_TIME = '2024-09-30T23:59:00+00:00'
 
 const TAKER_FEE = 0.0000 // 0.1%
 const MAKER_FEE = 0.0000 // 0.1%
 
-const LEVERAGE = 2
 // const MAINTENANCE_MARGIN_RATE = 0.0065 // https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin
 
 const INITIAL_BALANCES = {
@@ -76,7 +75,6 @@ export {
     END_PERIOD_TIME,
     TAKER_FEE,
     MAKER_FEE,
-    LEVERAGE,
     // MAINTENANCE_MARGIN_RATE,
     INITIAL_BALANCES,
     PRICE_CROSSOVER_FILTER_INTERVAL,

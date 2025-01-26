@@ -4,7 +4,6 @@ async function handleShutdown(signal, bot) {
     try {
         logger.info(`\nReceived ${signal}`)
         await bot.stop()
-        process.exit(0)
     } catch (error) {
         logger.error('Error during graceful shutdown:', error)
         process.exit(1)

@@ -17,6 +17,18 @@ class BaseExchange {
         throw new Error('Method createLimitSellOrder must be implemented')
     }
 
+    async createMarketBuyOrder(symbol, amount) {
+        throw new Error('createMarketBuyOrder method must be implemented by the exchange')
+    }
+
+    async createMarketSellOrder(symbol, amount) {
+        throw new Error('createMarketSellOrder method must be implemented by the exchange')
+    }
+
+    async fetchBalance() {
+        throw new Error('fetchBalance method must be implemented by the exchange')
+    }
+
     async fetchOrderBook(symbol) {
         throw new Error('Method fetchOrderBook must be implemented')
     }
@@ -47,14 +59,6 @@ class BaseExchange {
 
     async cancelAllOrders(symbol) {
         throw new Error('cancelAllOrders method must be implemented by the exchange')
-    }
-
-    async fetchBalance() {
-        throw new Error('fetchBalance method must be implemented by the exchange')
-    }
-
-    async createMarketSellOrder(symbol, amount) {
-        throw new Error('createMarketSellOrder method must be implemented by the exchange')
     }
 
     async cancelOrdersBelowPrice(symbol, price) {

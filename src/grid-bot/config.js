@@ -1,33 +1,42 @@
 // *************************************************************************************
-// IMPORTANT: SPOT: Before running, deposit some dust amount of Base Asset for Taker Fees. Otherwise, the bot will not be able to place a sell order. Alternatively, deposite dust BNB for Taker Fees.
+// IMPORTANT: SPOT: 
+// 1. Before running, deposit some dust amount of Base Asset for Taker Fees. Otherwise, the bot will not be able to place a sell order. Alternatively, deposite dust BNB for Taker Fees. Make sure BNB fees are enabled by API.
+// 2. Do not place LIMIT orders manually. Filled LIMIT order creates additional grid level, event if out of grid range. Manually only MARKET, STOP_MARKET, TAKE_PROFIT_MARKET order allowed.
+//      2.1 SPOT: buy additional BASE asset to be able to place EXIT order.
 // *************************************************************************************
 
 const riskConfig = {
-    gridNumber: 50,
-    investedAmount: 250,
-    leverage: 8,
+    investedAmount: 1000,
+    // gridNumber: 150,
+    gridStep: 0.0013,
     tradingFee: 0.0002,
     maintenanceMarginRate: 0.0065
 }
 
 const defaultConfig = {
     // pairName: 'ACT/USDT',
-    // lowerPrice: 0.2730,
-    // upperPrice: 0.2745,
+    // lowerPrice: 0.2000,
+    // upperPrice: 0.3000,
     // pricePrecision: 4,
-    // quantityPerGrid: 20,
-    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
-    // isInfiniteGrid: true,
-    // gridStep: 0.0001,
-
-    // pairName: 'ETH/FDUSD',
-    // lowerPrice: 2000,
-    // upperPrice: 4000,
-    // pricePrecision: 2,
-    // quantityPerGrid: 0.005,
+    // quantityPerGrid: 30,
     // marketType: 'linear', // spot, margin, linear, inverse, option, funding
     // isInfiniteGrid: false,
-    // gridStep: 10,
+    // gridStep: 0.0001,
+    // stopLoss: 0.2060,
+    // takeProfit: 0.2075, 
+    // leverage: 5,
+
+    pairName: 'ETH/USDT',
+    lowerPrice: 2000,
+    upperPrice: 4000,
+    pricePrecision: 2,
+    quantityPerGrid: 0.005,
+    marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    isInfiniteGrid: false,
+    gridStep: 10,
+    // stopLoss: 1000,
+    // takeProfit: 5000, 
+    leverage: 2,
 
     // pairName: 'MINA/USDT',
     // lowerPrice: 0.3500,
@@ -56,14 +65,14 @@ const defaultConfig = {
     // isInfiniteGrid: false,
     // pricePrecision: 4,
 
-    pairName: 'USDC/USDT',
-    lowerPrice: 1.0005,
-    upperPrice: 1.0044,
-    quantityPerGrid: 1000,
-    gridStep: 0.0050,
-    marketType: 'linear', // spot, margin, linear, inverse, option, funding
-    isInfiniteGrid: false,
-    pricePrecision: 4,
+    // pairName: 'USDC/USDT',
+    // lowerPrice: 1.0005,
+    // upperPrice: 1.0044,
+    // quantityPerGrid: 1000,
+    // gridStep: 0.0050,
+    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    // isInfiniteGrid: false,
+    // pricePrecision: 4,
 
     // ===============================
 
@@ -104,7 +113,7 @@ const defaultConfig = {
     // gridStep: 10,
 
     apiKey: process.env.BINANCE_API_KEY,
-    apiSecret: process.env.BINANCE_API_SECRET
+    apiSecret: process.env.BINANCE_API_SECRET,
 }
 
 const config = process.env.NODE_ENV === 'production' ? {
@@ -116,6 +125,9 @@ const config = process.env.NODE_ENV === 'production' ? {
     quantityPerGrid: parseFloat(process.env.QUANTITY_PER_GRID),
     marketType: process.env.MARKET_TYPE,
     isInfiniteGrid: process.env.IS_INFINITE_GRID === 'true',
+    stopLoss: parseFloat(process.env.STOP_LOSS),
+    takeProfit: parseFloat(process.env.TAKE_PROFIT),
+    leverage: parseInt(process.env.LEVERAGE),
     apiKey: process.env.API_KEY,
     apiSecret: process.env.API_SECRET
 } : defaultConfig

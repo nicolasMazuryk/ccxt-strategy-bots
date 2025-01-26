@@ -1,7 +1,6 @@
 import { BaseEmulator } from './emulator-base.js'
 import logger from '../utils/logger.js'
 import chalk from 'chalk'
-import { LEVERAGE } from '../backtester/config.js'
 import { getMaintenanceRate } from '../utils/maintenance-tier.js'
 
 class FuturesExchangeEmulator extends BaseEmulator {
@@ -26,6 +25,8 @@ class FuturesExchangeEmulator extends BaseEmulator {
         
         // Position parameters
         this.positions = {}
+
+        this.leverage = 1
     }
 
     fetchBalance() {
@@ -44,7 +45,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
                     positionAmt: position.positionAmount.toFixed(8),
                     unrealizedProfit: position.unrealizedPnL.toFixed(8),
                     notional: position.notional.toFixed(2),
-                    initialMargin: (Math.abs(position.notional) / LEVERAGE).toFixed(8),
+                    initialMargin: (Math.abs(position.notional) / this.leverage).toFixed(8),
                     maintMargin: position.maintenanceMargin.toFixed(8),
                 }))
             }
@@ -64,6 +65,10 @@ class FuturesExchangeEmulator extends BaseEmulator {
             wallet: { ...this.wallet },
             positions: { ...this.positions }
         }
+    }
+
+    setLeverage(symbol, leverage) {
+        this.leverage = leverage
     }
 
     processNewPrice(pairName, price, timestamp) {
@@ -86,7 +91,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
                 unrealizedPnL: 0,
                 notional: 0,
                 maintenanceMargin: 0,
-                leverage: LEVERAGE,
+                leverage: this.leverage,
             }
         }
     }

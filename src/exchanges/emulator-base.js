@@ -120,6 +120,14 @@ class BaseEmulator extends BaseExchange {
         return order
     }
 
+    createStopLossOrder(pairName, side, quantity, stopPrice) {
+        logger.debug(chalk.cyan(`Create Stop-Loss order: ${side} ${quantity} @ ${stopPrice} for ${pairName}`))
+    }
+
+    createTakeProfitOrder(pairName, side, quantity, takeProfitPrice) {
+        logger.debug(chalk.cyan(`Create Take-Profit order: ${side} ${quantity} @ ${takeProfitPrice} for ${pairName}`))
+    }
+
     processNewPrice(pairName, price, timestamp) {
         this.currentPrices[pairName] = price
         this.currentTimestamp = timestamp
