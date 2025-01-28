@@ -35,16 +35,16 @@ async function parseCsvMarketData(dest, startPeriod = null, endPeriod = null) {
                 const timestampSec = Number(timestamp.toString().slice(0, 13))
 
                 const data = {
-                    id: Number(aggregateTradeId),
+                    // id: Number(aggregateTradeId),
                     price: Number(price), 
-                    quantity: Number(quantity),
+                    // quantity: Number(quantity),
                     timestamp: timestampSec,
-                    time: new Date(timestampSec),
-                    isBuyerTaker: String(wasBuyerMaker).toLowerCase() !== 'true'
+                    // time: new Date(timestampSec),
+                    // isBuyerTaker: String(wasBuyerMaker).toLowerCase() !== 'true'
                 }
 
-                if (data.time.getFullYear() < 2010 || data.time.getFullYear() > 2030) {
-                    throw new Error(`Invalid trade timestamp: ${data.time}. Year must be between 2010 and 2030`, data)
+                if (new Date(timestampSec).getFullYear() < 2010 || new Date(timestampSec).getFullYear() > 2030) {
+                    throw new Error(`Invalid trade timestamp: ${new Date(timestampSec)}. Year must be between 2010 and 2030`, data)
                 }
 
                 // return all data if no time range is provided

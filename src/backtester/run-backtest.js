@@ -41,7 +41,6 @@ async function initializeBacktestComponents(marketData) {
 }
 
 async function runBacktest() {
-    const startTime = performance.now()
     let counter = 0
 
     try {
@@ -51,6 +50,7 @@ async function runBacktest() {
         logger.info('Initializing backtest components...')
         const { exchange, bot, engine } = await initializeBacktestComponents(marketData)
 
+        const startTime = performance.now()
         logger.info('Processing market data...')
 
         for (const trade of marketData) {
@@ -76,7 +76,7 @@ async function runBacktest() {
         const endTime = performance.now()
         const executionTime = (endTime - startTime) / 1000
         logger.info(`Total execution time: ${executionTime.toFixed(2)} seconds`)
-        logger.info(`Average time per trade: ${(executionTime / marketData.length * 1000).toFixed(2)} ms`)
+        logger.info(`Average time per trade: ${(executionTime / marketData.length * 1000).toFixed(4)} ms`)
         logger.info(`Memory usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`)
     } catch (error) {
         logger.error('Backtest failed:', error)

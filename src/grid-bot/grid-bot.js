@@ -222,8 +222,7 @@ class GridBot {
             logger.info(chalk.cyan('====== Initializing grid ======'))
 
             if (this.exchange.marketType === 'linear') {
-                if (this.isBacktest) this.exchange.setLeverage(this.pairName.replace('/', ''), this.leverage)
-                if (!this.isBacktest) await this.exchange.setLeverage(this.pairName.replace('/', ''), this.leverage)
+                await this.exchange.setLeverage(this.pairName.replace('/', ''), this.leverage)
                 logger.info(chalk.cyan(`Leverage set to ${this.leverage}x`))
             }
 

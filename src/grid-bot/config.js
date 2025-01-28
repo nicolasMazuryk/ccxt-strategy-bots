@@ -36,7 +36,7 @@ const defaultConfig = {
     gridStep: 10,
     // stopLoss: 1000,
     // takeProfit: 5000, 
-    leverage: 2,
+    leverage: 5,
 
     // pairName: 'MINA/USDT',
     // lowerPrice: 0.3500,

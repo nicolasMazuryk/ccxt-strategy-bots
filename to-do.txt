@@ -4,10 +4,9 @@
 
 
 6. Move try/catch and logging from grid-bot.js to binance-exchange.js
+7. Backtesting:
+    - Stop-Loss and Take-Profit
 
-
-
----- Kateryna: check her Binance borrowing USDP/USDT isolated margin
 
 - Infinite backtesting period. Get monthly data and clear array and store data. At the end: sum up. (can't backtest yearly periods)
 - Infinite grid with trailing 5% below the highest high. Trailing Stop-Loss respectively.
@@ -19,7 +18,7 @@ REAL BACKTESTING
 Add maxDrawdown/maxRunup by price to statistics
 Add backtesting period in days to statistics (16 days, 5h)
 
-
+---- Viktor-Father: create Binance Account for borrowing USDP/USDT isolated margin
 
 - Build tool to measure range where price fluctuates most of the time (top-bottom 15% percentile)
 
