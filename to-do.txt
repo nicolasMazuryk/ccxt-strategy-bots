@@ -1,5 +1,17 @@
 1. Make sure Lambda slack notification is working
 
+REAL BACKTESTING
+- Calculate 15% percentile and 85% percentile and set grid accordingly
+
+[] Backtest: Risks (downtrend)
+[] Backtest: Local Grid
+
+
+- Infinite grid with trailing 5% below the highest high. Trailing Stop-Loss respectively.
+- Explore: Hedge Mode on the grid lowerLevel: fixing loss without closing the grid (if re-enter the grid - no loss). It is more capital efficient.
+
+// Modify the Infinite Grid mode so that it always trails below the highest high. For example, if the price updates to a new highest high, the Infinite Grid bot should adjust its level so that the upperLevel is 5% (configurable as an environment variable) below the highest high price.
+// The Stop-Loss should trail accordingly, while the Take-Profit remains unchanged.
 
 
 
@@ -7,20 +19,24 @@
 7. Backtesting:
     - Stop-Loss and Take-Profit
 
+8. BUG: Metrics results: Open Orders show 0, but Unrealized PnL is negative/positive
+9. Make sure "Min Available Balance" in statistics inlcude:
+    = Balance - Unrealized PnL - "margin for all grid OPEN orders"
+10.  Along with setLeverage on bot initialization
+    - SPOT: https://www.binance.com/bapi/futures/v1/private/future/user-data/change-fee-burn in Spot Fees Structure on Website
+    - FUTURES: "Toggle BNB Burn On Futures Trade (TRADE)" in Postman
 
-- Infinite backtesting period. Get monthly data and clear array and store data. At the end: sum up. (can't backtest yearly periods)
-- Infinite grid with trailing 5% below the highest high. Trailing Stop-Loss respectively.
-
-REAL BACKTESTING
 
 
 
 Add maxDrawdown/maxRunup by price to statistics
+("Max Liquidation Distance      31.32%") Add also "Max Liquidation Price Level"
 Add backtesting period in days to statistics (16 days, 5h)
 
 ---- Viktor-Father: create Binance Account for borrowing USDP/USDT isolated margin
 
 - Build tool to measure range where price fluctuates most of the time (top-bottom 15% percentile)
+- Build a tool to measure the price volatility frequency (hourly, daily etc) for grid-bot. How many trades fit?
 
 // TODO: research npm package for exchange emulation
 
@@ -50,7 +66,7 @@ Visualization:
 
 
 FDUSD/USDT
-FDUSD/USDC 
+FDUSD/USDC
 TUSD/USDT
 USDT/DAI
 USDC/USDT
@@ -61,14 +77,35 @@ USDC/USDT
 
 ------- GRID PAIRS ------- 
 AMB/USDT
-MINA/USDT
+
+MINA/USDT - so/so
+    leverage: 3,
+    gridStep: 0.0025,
+    lowerPrice: 0.4000,
+    upperPrice: 0.6500,
+    quantityPerGrid: 30,
 
 - BTC/USDT
+    isInfiniteGrid: true,
+    leverage: 1,
+    gridStep: 400,
+    lowerPrice: 46000,
+    upperPrice: 48000,
+    quantityPerGrid: 0.00420,
+    60%
+
 - ETH/USDT
 
-- MATIC/USDT
-- LRC/USDT
-- LTC/USDT
+- MATIC/USDT - no
+- LRC/USDT - no buyers, only sellers
+- LTC/USDT - concentrated liquidity. short range. SPOT
+    leverage: 1,
+    gridStep: 0.40,
+    lowerPrice: 80,
+    upperPrice: 85,
+    quantityPerGrid: 0.90,
+    50.26%
+
 - SOL/BTC
 
 - RIF/USDT
@@ -85,7 +122,7 @@ MINA/USDT
 - TIA/USDT
 - OP/USDT
 
-
+[] GOLD pegged coins
 
 
 ------- PAIR TRADING ------- 

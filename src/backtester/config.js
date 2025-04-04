@@ -4,12 +4,13 @@ import { dirname } from 'path'
 
 // ===== DOWNLOAD =====
 const MARKET = 'spot'
-const PAIR_NAME = 'ETH/FDUSD'
-// const PAIR_NAME = 'MINA/USDT'
+// const PAIR_NAME = 'BTC/USDT'
+const PAIR_NAME = 'BTC/USDT_100'
+// const PAIR_NAME = 'LTC/USDT_0.1'
 
-const START_DATE = '2021-09-10' // USDP/USDT market data availability
-// const START_DATE = '2024-01-01'
-const END_DATE = '2024-01-01'
+// const START_DATE = '2021-09-10' // USDP/USDT market data availability
+const START_DATE = '2022-06-24'
+const END_DATE = '2022-12-31'
 // =========================
 
 const SYMBOL = PAIR_NAME.replace('/', '')
@@ -25,8 +26,8 @@ const SYMBOL_AGGREGATED_DATA_DIR = path.join(AGGREGATED_MARKET_DATA_DIR, SYMBOL)
 const BACKTEST_RESULTS_DIR = path.join(BASE_BACKTESTER_DIR, 'backtest-results')
 // ===== FILTER =====
 
-const PRICE_CROSSOVER_FILTER_INTERVAL = 0.0001
-const IS_STABLECOIN = true
+const PRICE_CROSSOVER_FILTER_INTERVAL = 100
+const IS_STABLECOIN = false
 
 // ===== DEVELOPMENT =====
 // Etalon testing period
@@ -40,11 +41,12 @@ const IS_STABLECOIN = true
 // const START_PERIOD_TIME = '2023-02-01T00:00:00+00:00'
 // const END_PERIOD_TIME = '2023-02-28T23:59:00+00:00'
 
-const START_PERIOD_TIME = '2024-01-01T00:00:00+00:00'
-const END_PERIOD_TIME = '2024-03-29T23:59:00+00:00'
+const START_PERIOD_TIME = '2023-01-01T00:00:00+00:00'
+// const END_PERIOD_TIME = '2024-12-31T23:59:00+00:00'
+const END_PERIOD_TIME = '2023-12-31T23:59:00+00:00'
 
-const TAKER_FEE = 0.0000 // 0.1%
 const MAKER_FEE = 0.0000 // 0.1%
+const TAKER_FEE = 0.0000 // 0.1%
 
 // const MAINTENANCE_MARGIN_RATE = 0.0065 // https://www.binance.com/en/futures/trading-rules/perpetual/leverage-margin
 

@@ -19,6 +19,7 @@ const gridRiskCalculator = ({
     investedAmount,
 }) => {
     const toPrecision = formatNumberWithPrecision(pricePrecision)
+    const currencyPrecision = formatNumberWithPrecision(2)
     const gridLevels = []
 
     if (gridStep) {
@@ -149,19 +150,19 @@ const gridRiskCalculator = ({
     logger.info(`Price Range: ${chalk.yellow('$' + toPrecision(lowerPrice))} - ${chalk.yellow('$' + toPrecision(upperPrice))}`)
     
     logger.info(chalk.cyan('\n--- Profit Analysis ---'))
-    logger.info(`Profit Per Grid (USD): ${chalk.green('$' + toPrecision(lowestGridProfit.profitWithFee))} - ${chalk.green('$' + toPrecision(highestGridProfit.profitWithFee))}`)
+    logger.info(`Profit Per Grid (USD): ${chalk.green('$' + currencyPrecision(lowestGridProfit.profitWithFee))} - ${chalk.green('$' + currencyPrecision(highestGridProfit.profitWithFee))}`)
     logger.info(`Profit Per Grid (%): ${chalk.green(lowestGridProfit.profitPercent.toFixed(2) + '%')} - ${chalk.green(highestGridProfit.profitPercent.toFixed(2) + '%')}`)
     logger.info(`Profit Per Grid (Absolute %): ${chalk.green(lowestGridProfit.absoluteProfitPercent.toFixed(4) + '%')} - ${chalk.green(highestGridProfit.absoluteProfitPercent.toFixed(4) + '%')}`)
     
     logger.info(chalk.cyan('\n--- Risk Metrics ---'))
-    logger.info(`Total Margin Required: ${chalk.yellow('$' + totalMarginRequired.toFixed(2))}`)
-    logger.info(`Total Trading Fees: ${chalk.yellow('$' + totalTradingFees.toFixed(2))}`)
-    logger.info(`Worst Case Unrealized P&L: ${chalk.red('$' + unrealizedPnL.toFixed(2))}`)
-    logger.info(`Maximum Grid Drawdown: ${chalk.red('$' + maxDrawdown.toFixed(2))} (${chalk.red(maxDrawdownPercent.toFixed(2) + '%')})`)
+    logger.info(`Total Margin Required: ${chalk.yellow('$' + currencyPrecision(totalMarginRequired))}`)
+    logger.info(`Total Trading Fees: ${chalk.yellow('$' + currencyPrecision(totalTradingFees))}`)
+    logger.info(`Worst Case Unrealized P&L: ${chalk.red('$' + currencyPrecision(unrealizedPnL))}`)
+    logger.info(`Maximum Grid Drawdown: ${chalk.red('$' + currencyPrecision(maxDrawdown))} (${chalk.red(maxDrawdownPercent.toFixed(2) + '%')})`)
     logger.info(`Risk/Reward Ratio per Grid: ${chalk.yellow(riskRewardRatio.toFixed(2))}`)
     logger.info(`Single Position Size: ${chalk.yellow(singlePositionSizePercent.toFixed(2) + '%')} of account`)
     logger.info(`Maximum Concurrent Positions: ${chalk.yellow(maxConcurrentPositions)}`)
-    logger.info(`Maximum Exposure: ${chalk.yellow('$' + maxExposure.toFixed(2))}`)
+    logger.info(`Maximum Exposure: ${chalk.yellow('$' + currencyPrecision(maxExposure))}`)
     logger.info(`Max Exposure / Invested Amount: ${chalk.yellow(accountRiskPercentage.toFixed(2) + '%')}`)
     
     logger.info(chalk.cyan('\n--- Critical Price Levels ---'))
@@ -169,9 +170,9 @@ const gridRiskCalculator = ({
     logger.info(`Liquidation Price: ${chalk.red('$' + toPrecision(liquidationPrice))} (${chalk.red(liquidationPercentageDistance.toFixed(2) + '%')} below lowest grid)`)
     
     logger.info(chalk.cyan('\n--- Grid Levels ---'))
-    gridLevels.forEach((level, index) => {
-        logger.info(`Grid ${chalk.yellow(index + 1)}: ${chalk.yellow('$' + toPrecision(level))}`)
-    })
+    // gridLevels.forEach((level, index) => {
+    //     logger.info(`Grid ${chalk.yellow(index + 1)}: ${chalk.yellow('$' + toPrecision(level))}`)
+    // })
     logger.info(chalk.bold('========================\n'))
 
     return { gridStep, gridNumber }

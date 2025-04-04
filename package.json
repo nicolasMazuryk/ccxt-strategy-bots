@@ -8,7 +8,8 @@
     "download-market-data": "node src/backtester/market-data/download-market-data.js",
     "filter-market-data": "node src/backtester/market-data/filter-market-data.js",
     "get-data": "npm run download-market-data && npm run filter-market-data",
-    "grid-risk": "node src/grid-bot/grid-risk-calculator/run.js"
+    "grid-risk": "node src/grid-bot/grid-risk-calculator/run.js",
+    "backtest": "node src/backtester/run.js"
   },
   "dependencies": {
     "axios": "^1.7.9",

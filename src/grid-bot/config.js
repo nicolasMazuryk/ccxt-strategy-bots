@@ -7,10 +7,17 @@
 
 const riskConfig = {
     investedAmount: 1000,
-    // gridNumber: 150,
-    gridStep: 0.0013,
-    tradingFee: 0.0002,
-    maintenanceMarginRate: 0.0065
+    tradingFee: 0.000, // 0.0002
+    maintenanceMarginRate: 0.0065,
+    pricePrecision: 1,
+    leverage: 1,
+
+    // gridNumber: 100,
+
+    gridStep: 400,
+    lowerPrice: 16000,
+    upperPrice: 18000,
+    quantityPerGrid: 0.01110,
 }
 
 const defaultConfig = {
@@ -26,26 +33,53 @@ const defaultConfig = {
     // takeProfit: 0.2075, 
     // leverage: 5,
 
-    pairName: 'ETH/USDT',
-    lowerPrice: 2000,
-    upperPrice: 4000,
-    pricePrecision: 2,
-    quantityPerGrid: 0.005,
-    marketType: 'linear', // spot, margin, linear, inverse, option, funding
-    isInfiniteGrid: false,
-    gridStep: 10,
-    // stopLoss: 1000,
-    // takeProfit: 5000, 
-    leverage: 5,
-
-    // pairName: 'MINA/USDT',
-    // lowerPrice: 0.3500,
-    // upperPrice: 1.6000,
-    // pricePrecision: 4,
-    // quantityPerGrid: 5,
+    // pairName: 'ETH/USDT',
+    // lowerPrice: 2150,
+    // upperPrice: 2750,
+    // pricePrecision: 2,
+    // quantityPerGrid: 0.0180,
     // marketType: 'linear', // spot, margin, linear, inverse, option, funding
     // isInfiniteGrid: false,
-    // gridStep: 0.0063,
+    // gridStep: 10,
+    // // stopLoss: 1000,
+    // // takeProfit: 5000, 
+    // leverage: 5,
+
+    // pairName: 'MINA/USDT',
+    // pricePrecision: 4,
+    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    // isInfiniteGrid: false,
+    // leverage: 3,
+    // // stopLoss: 1000,
+    // // takeProfit: 5000, 
+    // gridStep: 0.0025,
+    // lowerPrice: 0.4000,
+    // upperPrice: 0.6500,
+    // quantityPerGrid: 30,
+
+    pairName: 'BTC/USDT',
+    pricePrecision: 1,
+    marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    isInfiniteGrid: true,
+    leverage: 1,
+    // stopLoss: 1000,
+    // takeProfit: 5000, 
+    gridStep: 400,
+    lowerPrice: 16000,
+    upperPrice: 18000,
+    quantityPerGrid: 0.01110,
+
+    // pairName: 'LTC/USDT',
+    // pricePrecision: 2,
+    // marketType: 'linear', // spot, margin, linear, inverse, option, funding
+    // isInfiniteGrid: false,
+    // leverage: 1,
+    // // stopLoss: 1000,
+    // // takeProfit: 5000, 
+    // gridStep: 0.40,
+    // lowerPrice: 60,
+    // upperPrice: 90,
+    // quantityPerGrid: 0.15,
 
     // pairName: '1000SATS/USDT',
     // lowerPrice: 0.00017,
