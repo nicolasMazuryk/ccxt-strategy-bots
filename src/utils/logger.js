@@ -1,7 +1,7 @@
 import winston from 'winston'
 import chalk from 'chalk'
 
-const LOGGER_LEVEL = process.env.LOGGER_LEVEL || 'info'
+const LOGGER_LEVEL = process.env.LOGGER_LEVEL || 'debug' // debug, info, warn, error
 
 const formatMultipleParams = (...args) => {
     return args.map(arg => {

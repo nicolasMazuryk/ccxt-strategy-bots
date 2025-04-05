@@ -4,7 +4,22 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Grid Bot",
+            "env": {
+                "IS_VSCODE_DEBUGGER": "true"
+            },
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/src/grid-bot/run.js",
+            "runtimeArgs": [
+                "--max-old-space-size=8192"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Backtester",
             "env": {
                 "IS_VSCODE_DEBUGGER": "true"
             },

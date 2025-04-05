@@ -16,6 +16,7 @@ class GridBot {
         leverage,
         exchange,
         isBacktest = false,
+        isHedgeMode = false,
     }) {
         this.pairName = pairName
         this.lowerPrice = lowerPrice
@@ -38,8 +39,11 @@ class GridBot {
         this.stopLoss = stopLoss
         this.takeProfit = takeProfit
         this.leverage = leverage
+        this.isHedgeMode = isHedgeMode && this.exchange.marketType === 'linear'
 
         logger.info(chalk.cyan(`Initializing ${this.exchange.marketType.toUpperCase()} Grid Bot for ${chalk.bold(pairName)}`))
+        logger.info(chalk.cyan(`- Hedge Mode: ${this.isHedgeMode ? chalk.green('Enabled') : chalk.red('Disabled')}`))
+        logger.info(chalk.cyan(`- Leverage: ${this.leverage}x`))
         logger.info(chalk.cyan('Grid Parameters:'))
         logger.info(chalk.cyan(`- Price Range: ${chalk.yellow(lowerPrice)} to ${chalk.yellow(upperPrice)}`))
         logger.info(chalk.cyan(`- Grid Step: ${chalk.yellow(gridStep)}`))
@@ -91,6 +95,7 @@ class GridBot {
         const price = order.price || order.originalPrice
         
         if (!this.isBacktest) await this.checkStopLossAndTakeProfitOrder(order)
+        if (this.isHedgeMode) await this.handleHedgeOrder(order)
 
         if (orderStatus === 'FILLED' && orderType === 'LIMIT') {
             logger.debug(chalk.green(`Order filled - ${side} @ ${price}`))
@@ -165,9 +170,10 @@ class GridBot {
 
     async placeBuyOrder(price) {
         try {
+            const params = this.isHedgeMode ? { positionSide: 'LONG' } : {}
             const order = this.isBacktest
-                ? this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price)
-                : await this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price)
+                ? this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price, params)
+                : await this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price, params)
             
             logger.debug(chalk.green(`Successfully placed BUY order @ ${price}`))
             return order
@@ -178,9 +184,10 @@ class GridBot {
 
     async placeSellOrder(price) {
         try {
+            const params = this.isHedgeMode ? { positionSide: 'LONG' } : { reduceOnly: true }
             const order = this.isBacktest
-                ? this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price)
-                : await this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price)
+                ? this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price, params)
+                : await this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price, params)
             
             logger.debug(chalk.green(`Successfully placed SELL order: ${this.quantityPerGrid} @ ${price}`))
             return order
@@ -192,13 +199,66 @@ class GridBot {
     async checkStopLossAndTakeProfitOrder(order) {
         const orderType = order.type || order.orderType
         const orderStatus = order.orderStatus
+        const positionSide = order.positionSide
+
+        // ignore HEDGE orders here. They are managed by the handleHedgeOrder method
+        if (positionSide === 'SHORT') return
 
         if (orderStatus === 'FILLED' || orderStatus === 'EXPIRED') {
-
             if (['STOP', 'STOP_MARKET', 'STOP_LIMIT', 'STOP_LOSS', 'STOP_LOSS_MARKET', 'STOP_LOSS_LIMIT', 'TAKE_PROFIT', 'TAKE_PROFIT_MARKET', 'TAKE_PROFIT_LIMIT'].includes(orderType)) {
                 // TO-DO:change to warning once tested
                 logger.error(chalk.yellow(`[EXIT] ${orderType} order ${orderStatus} at price ${order.stopPrice}. Stopping bot...`))
                 await this.stop()
+            }
+        }
+    }
+
+    async handleHedgeOrder(order) {
+        const orderType = order.type || order.orderType
+        const originalOrderType = order.originalOrderType
+        const orderStatus = order.orderStatus
+        const side = order.side || order.orderSide
+        const stopPrice = order.stopPrice || order.triggerPrice
+        const quantity = order.originalQuantity || this.calculateCapitalAndQuantityTotals().totalQuantity
+        const positionSide = order.positionSide
+        
+        const isHedgeOrder = 
+            orderStatus === 'FILLED' && 
+            orderType === 'MARKET' && 
+            originalOrderType === 'STOP_MARKET' && 
+            positionSide === 'SHORT'
+
+        if (isHedgeOrder) {
+            if (side === 'SELL') {
+                // Hedge open order filled, place hedge close order
+                logger.info(chalk.cyan(`Hedge SHORT position opened at ${chalk.yellow(stopPrice)}. Placing hedge close order...`))
+                
+                const lowestGridLevel = this.gridLevels[0]
+                const params = { positionSide: 'SHORT' }
+                const order = await this.exchange.createStopMarketOrder(
+                    this.pairName,
+                    'BUY',
+                    quantity,
+                    lowestGridLevel,
+                    params
+                )
+                logger.info(chalk.cyan(`Placed order to close HEDGE SHORT position: ${order.type.toUpperCase()} BUY ${chalk.yellow(quantity)} ${this.pairName.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
+            } else if (side === 'BUY') {
+                // Hedge close order filled, place hedge open order
+                logger.info(chalk.cyan(`Hedge SHORT position closed at ${chalk.yellow(stopPrice)}. Placing hedge open order...`))
+                
+                const lowestGridLevel = this.gridLevels[0]
+                const shortEntryPrice = this.toPrecision(lowestGridLevel - this.gridStep)
+                
+                const params = { positionSide: 'SHORT' }
+                const order = await this.exchange.createStopMarketOrder(
+                    this.pairName,
+                    'SELL',
+                    quantity,
+                    shortEntryPrice,
+                    params
+                )
+                logger.info(chalk.cyan(`Placed order to open HEDGE SHORT position: ${order.type.toUpperCase()} SELL ${chalk.yellow(quantity)} ${this.pairName.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
             }
         }
     }
@@ -222,6 +282,8 @@ class GridBot {
             logger.info(chalk.cyan('====== Initializing grid ======'))
 
             if (this.exchange.marketType === 'linear') {
+                await this.exchange.setHedgeMode(this.pairName, this.isHedgeMode)
+                
                 await this.exchange.setLeverage(this.pairName.replace('/', ''), this.leverage)
                 logger.info(chalk.cyan(`Leverage set to ${this.leverage}x`))
             }
@@ -233,7 +295,7 @@ class GridBot {
             await this.exchange.initializeWebSocket()
             await this.exchange.subscribeToUserData()
 
-            if (!this.isBacktest) await wait(1000)
+            if (!this.isBacktest) await wait(4000)
 
             this.exchange.onOrderUpdate = this.handleOrderUpdate.bind(this)
             this.exchange.onPriceUpdate = this.onOrderbookBestBidAskUpdateEvent.bind(this)
@@ -251,8 +313,26 @@ class GridBot {
             }
 
             if (!this.isBacktest && this.exchange.marketType === 'linear') {
-                if (this.stopLoss) await this.exchange.createStopLossOrder(this.pairName, 'SELL', totalQuantity, this.stopLoss)
-                if (this.takeProfit) await this.exchange.createTakeProfitOrder(this.pairName, 'SELL', totalQuantity, this.takeProfit)
+                const params = this.isHedgeMode ? { positionSide: 'LONG' } : { reduceOnly: true }
+                if (this.stopLoss) await this.exchange.createStopLossOrder(this.pairName, 'SELL', totalQuantity, this.stopLoss, { ...params }) // use ... spread to avoid mutation later internally in the library
+                if (this.takeProfit) await this.exchange.createTakeProfitOrder(this.pairName, 'SELL', totalQuantity, this.takeProfit, { ...params }) // use ... spread to avoid mutation later internally in the library
+            }
+
+            if (this.isHedgeMode) {
+                const lowestGridLevel = this.gridLevels[0]
+                const shortEntryPrice = this.toPrecision(lowestGridLevel - this.gridStep)
+                
+                logger.info(chalk.cyan(`Placing order to open HEDGE SHORT position at ${chalk.yellow(shortEntryPrice)} with quantity ${chalk.yellow(totalQuantity)}`))
+                
+                const params = { positionSide: 'SHORT' }
+                const order = await this.exchange.createStopMarketOrder(
+                    this.pairName, 
+                    'SELL', 
+                    totalQuantity, 
+                    shortEntryPrice,
+                    params
+                )
+                logger.info(chalk.cyan(`Placed order to open HEDGE SHORT position: ${order.type.toUpperCase()} SELL ${chalk.yellow(totalQuantity)} ${this.pairName.split('/')[0]} @ ${chalk.yellow(shortEntryPrice)}`))
             }
 
             await this.exchange.subscribeToBookTicker(this.pairName)
@@ -301,20 +381,26 @@ class GridBot {
                 const baseBalance = balance[baseAsset]?.free
                 if (baseBalance && baseBalance > 0) {
                     logger.info(chalk.yellow(`Selling remaining ${baseBalance} ${baseAsset} at market price...`))
-                    const exitOrder = await this.exchange.createMarketSellOrder(this.pairName, baseBalance)
+                    const exitOrder = await this.exchange.createMarketSellOrder(this.pairName, baseBalance, { reduceOnly: true })
                     logger.info(chalk.green(`Successfully sold ${exitOrder.filled} ${baseAsset} at ${exitOrder.average}`))
                 }
             } else if (this.exchange.marketType === 'linear') {
-                const positions = balance.info.positions
-                const position = positions.find(p => p.symbol === this.pairName.replace('/', ''))
-                const positionAmount = parseFloat(position?.positionAmt || 0)
-                
-                if (position && positionAmount !== 0) {
-                    logger.info(chalk.yellow(`Closing futures position of ${positionAmount} ${baseAsset}...`))
-                    const exitOrder = positionAmount > 0 ? 
-                        await this.exchange.createMarketSellOrder(this.pairName, Math.abs(positionAmount), { reduceOnly: true }) : 
-                        await this.exchange.createMarketBuyOrder(this.pairName, Math.abs(positionAmount), { reduceOnly: true })
-                    logger.info(chalk.green(`Successfully closed futures position of ${exitOrder.filled} ${baseAsset} at ${exitOrder.average}`))
+                const positions = balance.info.positions.filter(p => p.symbol === this.pairName.replace('/', ''))
+
+                for (const position of positions) {
+                    const positionAmount = parseFloat(position?.positionAmt || 0)
+                    const positionSide = position?.positionSide
+
+                    if (position && positionAmount !== 0) {
+                        logger.info(chalk.yellow(`Closing futures ${positionSide} position of ${positionAmount} ${baseAsset}...`))
+
+                        const params = this.isHedgeMode ? { positionSide: position?.positionSide } : { reduceOnly: true }
+
+                        const exitOrder = positionAmount > 0 ? 
+                            await this.exchange.createMarketSellOrder(this.pairName, Math.abs(positionAmount), params) :
+                            await this.exchange.createMarketBuyOrder(this.pairName, Math.abs(positionAmount), params)
+                        logger.info(chalk.green(`Successfully closed futures ${positionSide} position of ${exitOrder.filled} ${baseAsset} at ${exitOrder.average}`))
+                    }
                 }
             }
 

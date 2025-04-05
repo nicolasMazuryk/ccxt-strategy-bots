@@ -6,7 +6,7 @@ import { setupGracefulShutdown } from '../utils/graceful-shotdown.js'
 const exchange = new BinanceExchange({
     apiKey: config.apiKey,
     apiSecret: config.apiSecret,
-    marketType: config.marketType
+    marketType: config.marketType,
 })
 
 const bot = new GridBot({ ...config, exchange })

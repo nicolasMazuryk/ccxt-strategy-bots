@@ -1,5 +1,27 @@
 1. Make sure Lambda slack notification is working
 
+- Hedge Mode:
+[] hedge only the quantity utilized by grid (currently all grid quantity is hedged) -> Not for now. It will require to update hedge order everytime the new level above is filled. A lot of logic to test. Do it when grid-bot is successful!!!
+
+- Hedge Mode risk-calculator: add Hedge costs - difference between hedge levels + commission
+
+--- JUST RUN PROMPT----
+in binance-exchange.js
+
+add try/catch blocks for 
+createLimitBuyOrder
+createLimitSellOrder
+cancelAllOrders
+createMarketBuyOrder
+createMarketSellOrder
+
+similar to 
+createStopLossOrder
+createTakeProfitOrder
+-------
+
+
+
 REAL BACKTESTING
 - Calculate 15% percentile and 85% percentile and set grid accordingly
 
@@ -8,7 +30,6 @@ REAL BACKTESTING
 
 
 - Infinite grid with trailing 5% below the highest high. Trailing Stop-Loss respectively.
-- Explore: Hedge Mode on the grid lowerLevel: fixing loss without closing the grid (if re-enter the grid - no loss). It is more capital efficient.
 
 // Modify the Infinite Grid mode so that it always trails below the highest high. For example, if the price updates to a new highest high, the Infinite Grid bot should adjust its level so that the upperLevel is 5% (configurable as an environment variable) below the highest high price.
 // The Stop-Loss should trail accordingly, while the Take-Profit remains unchanged.

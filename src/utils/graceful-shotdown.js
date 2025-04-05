@@ -31,8 +31,8 @@ export function setupGracefulShutdown(bot) {
         await handleShutdown('UNHANDLED_REJECTION', bot)
     })
 
-    // setTimeout(async () => {
-    //     logger.info('Sending SIGINT signal...')
-    //     process.emit('SIGINT')
-    // }, 15000)
+    setTimeout(async () => {
+        logger.info('Sending SIGINT signal...')
+        process.emit('SIGINT')
+    }, 30000)
 }

@@ -32,12 +32,20 @@ class BinanceExchange extends BaseExchange {
         })
     }
 
-    async createLimitBuyOrder(symbol, quantity, price) {
-        return retry(async () => this.exchange.createLimitBuyOrder(symbol, quantity, price))
+    async setHedgeMode(symbol, isHedgeMode) {
+        if (this.marketType !== 'linear') return
+        
+        const formattedSymbol = symbol.replace('/', '')
+        await retry(async () => this.exchange.setPositionMode(isHedgeMode, formattedSymbol))
+        logger.info(chalk.green(`Hedge mode ${isHedgeMode ? 'enabled' : 'disabled'} for ${formattedSymbol}`))
     }
 
-    async createLimitSellOrder(symbol, quantity, price) {
-        return retry(async () => this.exchange.createLimitSellOrder(symbol, quantity, price))
+    async createLimitBuyOrder(symbol, quantity, price, params = {}) {
+        return retry(async () => this.exchange.createLimitBuyOrder(symbol, quantity, price, params))
+    }
+
+    async createLimitSellOrder(symbol, quantity, price, params = {}) {
+        return retry(async () => this.exchange.createLimitSellOrder(symbol, quantity, price, params))
     }
 
     async fetchOrderBook(symbol) {
@@ -131,7 +139,7 @@ class BinanceExchange extends BaseExchange {
         return retry(async () => this.exchange.createMarketSellOrder(symbol, amount, params))
     }
 
-    async createStopLossOrder(symbol, side, amount, stopPrice) {
+    async createStopLossOrder(symbol, side, amount, stopLossPrice, params = {}) {
         try {
             const order = await retry(async () => this.exchange.createStopLossOrder(
                 symbol,
@@ -139,36 +147,55 @@ class BinanceExchange extends BaseExchange {
                 side.toLowerCase(),
                 amount,
                 undefined,
-                stopPrice,
-                {
-                    reduceOnly: true
-                }
+                stopLossPrice,
+                params
             ))
             logger.info(chalk.cyan(`Placed Stop-Loss order: ${order.type.toUpperCase()} ${side} ${chalk.yellow(amount)} ${symbol.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
             return order
         } catch (error) {
+            if (await this.handleStopMarketOrderWouldTriggerImmediatelyError(error, symbol, side, amount, params, 'Stop-Loss')) return
+
             logger.error(chalk.red(`Failed to place Stop-Loss order: ${error.message}`))
             throw error
         }
     }
 
-    async createTakeProfitOrder(symbol, side, amount, takeProfitPrice) {
+    async createTakeProfitOrder(symbol, side, amount, takeProfitPrice, params = {}) {
         try {
             const order = await retry(async () => this.exchange.createTakeProfitOrder(
                 symbol,
                 'market',
-                side,
+                side.toLowerCase(),
                 amount,
                 undefined,
                 takeProfitPrice,
-                {
-                    reduceOnly: true
-                }
+                params
             ))
             logger.info(chalk.cyan(`Placed Take-Profit order: ${order.type.toUpperCase()} ${side} ${chalk.yellow(amount)} ${symbol.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
             return order
         } catch (error) {
+            if (await this.handleStopMarketOrderWouldTriggerImmediatelyError(error, symbol, side, amount, params, 'Take-Profit')) return
+
             logger.error(chalk.red(`Failed to place Take-Profit order: ${error.message}`))
+            throw error
+        }
+    }
+
+    async createStopMarketOrder(symbol, side, amount, stopPrice, params = {}) {
+        try {
+            const order = await retry(async () => this.exchange.createOrder(
+                symbol,
+                'market',
+                side.toLowerCase(),
+                amount,
+                undefined,
+                { ...params, triggerPrice: stopPrice }
+            ))
+            return order
+        } catch (error) {
+            if (await this.handleStopMarketOrderWouldTriggerImmediatelyError(error, symbol, side, amount, params, 'Stop-Market')) return
+
+            logger.error(chalk.red(`Failed to place Stop-Market order: ${error.message}`))
             throw error
         }
     }
@@ -185,6 +212,32 @@ class BinanceExchange extends BaseExchange {
         )
 
         return canceledOrders
+    }
+
+    async handleStopMarketOrderWouldTriggerImmediatelyError(error, symbol, side, amount, params, orderType) {
+        const orderWouldTriggerImmediatelyErrorMessage = "binanceusdm {\"code\":-2021,\"msg\":\"Order would immediately trigger.\"}"
+
+        // fallback to market order if stop order can not be executed
+        if (error.message === orderWouldTriggerImmediatelyErrorMessage) {
+            delete params.triggerPrice
+            delete params.stopLossPrice
+            delete params.takeProfitPrice
+
+            logger.warn(chalk.yellow(`Failed to place ${orderType.toUpperCase()} order - Stop price would trigger immediately. Placing simple MARKET order instead...`))
+            logger.warn(chalk.yellow(`MARKET order params: symbol=${symbol}, side=${side}, amount=${amount}, params=${JSON.stringify(params)}`))
+            
+            const order = await retry(async () => this.exchange.createOrder(
+                symbol,
+                'market',
+                side.toLowerCase(), 
+                amount,
+                undefined,
+                params
+            ))
+            return order
+        }
+
+        return false
     }
 }
 

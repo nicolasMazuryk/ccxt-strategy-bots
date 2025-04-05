@@ -41,6 +41,11 @@ export async function retry(fn, { retries = DEFAULT_RETRIES, delay = DEFAULT_DEL
                 continue
             }
 
+            // SAFELY IGNORED ERRORS 
+            const setHedgeModeErrorMessage = "binanceusdm {\"code\":-4059,\"msg\":\"No need to change position side.\"}"
+
+            if ([setHedgeModeErrorMessage].includes(error.message)) return
+
             throw error
         }
     }
