@@ -44,7 +44,7 @@ class BaseEmulator extends BaseExchange {
         }
     }
 
-    createLimitBuyOrder(pairName, quantity, price) {
+    createLimitBuyOrder(pairName, quantity, price, params) {
         const orderId = ++this.lastOrderId
         const order = {
             id: orderId,
@@ -54,14 +54,15 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'LIMIT',
-            timestamp: this.currentTimestamp
+            timestamp: this.currentTimestamp,
+            ...params
         }
         this.orders.push(order)
         logger.debug(chalk.cyan(`Place BUY order: ${quantity} @ ${price} for ${pairName}`))
         return order
     }
 
-    createLimitSellOrder(pairName, quantity, price) {
+    createLimitSellOrder(pairName, quantity, price, params) {
         const orderId = ++this.lastOrderId
         const order = {
             id: orderId,
@@ -71,14 +72,15 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'LIMIT',
-            timestamp: this.currentTimestamp
+            timestamp: this.currentTimestamp,
+            ...params
         }
         this.orders.push(order)
         logger.debug(chalk.cyan(`Place SELL order: ${quantity} @ ${price} for ${pairName}`))
         return order
     }
 
-    createMarketBuyOrder(pairName, quantity) {
+    createMarketBuyOrder(pairName, quantity, params) {
         const orderId = ++this.lastOrderId
         const executionPrice = this.currentPrices[pairName]
         
@@ -90,7 +92,8 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'MARKET',
-            timestamp: this.currentTimestamp
+            timestamp: this.currentTimestamp,
+            ...params
         }
         
         this.orders.push(order)
@@ -99,7 +102,7 @@ class BaseEmulator extends BaseExchange {
         return order
     }
 
-    createMarketSellOrder(pairName, quantity) {
+    createMarketSellOrder(pairName, quantity, params) {
         const orderId = ++this.lastOrderId
         const executionPrice = this.currentPrices[pairName]
         
@@ -111,7 +114,8 @@ class BaseEmulator extends BaseExchange {
             quantity,
             pairName,
             type: 'MARKET',
-            timestamp: this.currentTimestamp
+            timestamp: this.currentTimestamp,
+            ...params
         }
         
         this.orders.push(order)
@@ -120,12 +124,34 @@ class BaseEmulator extends BaseExchange {
         return order
     }
 
-    createStopLossOrder(pairName, side, quantity, stopPrice) {
-        logger.debug(chalk.cyan(`Create Stop-Loss order: ${side} ${quantity} @ ${stopPrice} for ${pairName}`))
+    createStopLossOrder(pairName, side, quantity, stopLossPrice, params) {
+        logger.debug(chalk.cyan(`Create Stop-Loss order: ${side} ${quantity} @ ${stopLossPrice} for ${pairName}`))
     }
 
-    createTakeProfitOrder(pairName, side, quantity, takeProfitPrice) {
+    createTakeProfitOrder(pairName, side, quantity, takeProfitPrice, params) {
         logger.debug(chalk.cyan(`Create Take-Profit order: ${side} ${quantity} @ ${takeProfitPrice} for ${pairName}`))
+    }
+
+    createStopMarketOrder(pairName, side, quantity, stopPrice, params) {
+        const orderId = ++this.lastOrderId
+        
+        const order = {
+            id: orderId,
+            side,
+            price: stopPrice,
+            stopPrice: stopPrice,
+            orderStatus: 'NEW',
+            quantity,
+            originalQuantity: quantity,
+            pairName,
+            type: 'MARKET',
+            originalOrderType: 'STOP_MARKET',
+            timestamp: this.currentTimestamp,
+            ...params
+        }
+        
+        this.orders.push(order)
+        return order
     }
 
     processNewPrice(pairName, price, timestamp) {

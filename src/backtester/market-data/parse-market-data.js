@@ -78,7 +78,7 @@ async function getHistoricalMarketData() {
         const files = await fs.promises.readdir(SYMBOL_AGGREGATED_DATA_DIR)
         const csvFiles = files
             .filter(file => {
-                if (!file.endsWith('.csv')) return false
+                if (!file.endsWith('.csv') || file.startsWith('._')) return false
                 // Extract date from filename (assuming format includes YYYY-MM-DD)
                 const fileDate = file.match(/\d{4}-\d{2}-\d{2}/)?.[0]
                 if (!fileDate) return false

@@ -27,6 +27,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
         this.positions = {}
 
         this.leverage = 1
+        this.isHedgeMode = false
     }
 
     fetchBalance() {
@@ -71,6 +72,10 @@ class FuturesExchangeEmulator extends BaseEmulator {
         this.leverage = leverage
     }
 
+    setHedgeMode(symbol, isHedgeMode) {
+        this.isHedgeMode = isHedgeMode
+    }
+
     processNewPrice(pairName, price, timestamp) {
         super.processNewPrice(pairName, price, timestamp)
 
@@ -83,7 +88,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
         if (!this.positions[pairName]) {
             this.positions[pairName] = {
                 pairName,
-                positionSide: 'BOTH',
+                positionSide: 'BOTH', // TODO: pass positionSide from grid-bot
                 positionAmount: 0,
                 entryPrice: 0,
                 liquidationPrice: 0,
@@ -121,7 +126,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
 
     _calculateOrderDetails(order, executionPrice, position) {
         const cost = order.quantity * executionPrice
-        const fee = order.type === 'MARKET' ? this.takerFee : this.makerFee
+        const fee = ['MARKET', 'STOP_MARKET'].includes(order.type) ? this.takerFee : this.makerFee
         const margin = cost / position.leverage
         const feeCost = cost * fee
         const maintenanceMargin = cost * getMaintenanceRate(order.pairName, cost)
@@ -202,7 +207,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
     _updatePositionAmount(order, position) {
         const direction = order.side === 'BUY' ? 1 : -1
         position.positionAmount += direction * order.quantity
-        position.positionSide = position.positionAmount > 0 ? 'LONG' : position.positionAmount < 0 ? 'SHORT' : 'BOTH'
+        position.positionSide = position.positionAmount > 0 ? 'LONG' : position.positionAmount < 0 ? 'SHORT' : 'BOTH' // TODO: position side is set by grid-bot in parameters
     }
 
     _updateEntryPrice(position, oldPosition, order, executionPrice) {
@@ -252,7 +257,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
     }
 
     _updatePositionPnL(pairName, currentPrice) {
-        const position = this.positions[pairName]
+        const position = this.positions[pairName] // TODO: process multiple positions
         if (!position || position.positionAmount === 0) return
 
         const priceDiff = currentPrice - position.entryPrice

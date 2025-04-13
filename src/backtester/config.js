@@ -4,20 +4,20 @@ import { dirname } from 'path'
 
 // ===== DOWNLOAD =====
 const MARKET = 'spot'
-// const PAIR_NAME = 'BTC/USDT'
-const PAIR_NAME = 'BTC/USDT_100'
+const PAIR_NAME = 'ETH/USDT'
+// const PAIR_NAME = 'BTC/USDT_100'
 // const PAIR_NAME = 'LTC/USDT_0.1'
 
 // const START_DATE = '2021-09-10' // USDP/USDT market data availability
-const START_DATE = '2022-06-24'
-const END_DATE = '2022-12-31'
+const START_DATE = '2025-04-01'
+const END_DATE = '2025-04-13'
 // =========================
 
 const SYMBOL = PAIR_NAME.replace('/', '')
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-const BASE_BACKTESTER_DIR = path.join(__dirname, '../../')
+const BASE_BACKTESTER_DIR = path.join('/Volumes/PortableSSD')
 const BASE_MARKET_DATA_DIR = path.join(BASE_BACKTESTER_DIR, 'market-data')
 const RAW_MARKET_DATA_DIR = path.join(BASE_MARKET_DATA_DIR, 'raw')
 const AGGREGATED_MARKET_DATA_DIR = path.join(BASE_MARKET_DATA_DIR, 'aggregated')
@@ -26,7 +26,7 @@ const SYMBOL_AGGREGATED_DATA_DIR = path.join(AGGREGATED_MARKET_DATA_DIR, SYMBOL)
 const BACKTEST_RESULTS_DIR = path.join(BASE_BACKTESTER_DIR, 'backtest-results')
 // ===== FILTER =====
 
-const PRICE_CROSSOVER_FILTER_INTERVAL = 100
+const PRICE_CROSSOVER_FILTER_INTERVAL = 1
 const IS_STABLECOIN = false
 
 // ===== DEVELOPMENT =====
@@ -41,9 +41,9 @@ const IS_STABLECOIN = false
 // const START_PERIOD_TIME = '2023-02-01T00:00:00+00:00'
 // const END_PERIOD_TIME = '2023-02-28T23:59:00+00:00'
 
-const START_PERIOD_TIME = '2023-01-01T00:00:00+00:00'
-// const END_PERIOD_TIME = '2024-12-31T23:59:00+00:00'
-const END_PERIOD_TIME = '2023-12-31T23:59:00+00:00'
+const START_PERIOD_TIME = '2025-04-12T00:00:00+00:00'
+const END_PERIOD_TIME = '2025-04-12T00:20:00+00:00'
+// const END_PERIOD_TIME = '2023-12-31T23:59:00+00:00'
 
 const MAKER_FEE = 0.0000 // 0.1%
 const TAKER_FEE = 0.0000 // 0.1%

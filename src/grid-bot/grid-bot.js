@@ -95,7 +95,10 @@ class GridBot {
         const price = order.price || order.originalPrice
         
         if (!this.isBacktest) await this.checkStopLossAndTakeProfitOrder(order)
-        if (this.isHedgeMode) await this.handleHedgeOrder(order)
+        if (this.isHedgeMode) {
+            if (this.isBacktest) this.handleHedgeOrder(order)
+            if (!this.isBacktest) await this.handleHedgeOrder(order)
+        }
 
         if (orderStatus === 'FILLED' && orderType === 'LIMIT') {
             logger.debug(chalk.green(`Order filled - ${side} @ ${price}`))
@@ -201,7 +204,7 @@ class GridBot {
         const orderStatus = order.orderStatus
         const positionSide = order.positionSide
 
-        // ignore HEDGE orders here. They are managed by the handleHedgeOrder method
+        // ignore HEDGE orders here. They are managed by the handleHedgeOrder() method
         if (positionSide === 'SHORT') return
 
         if (orderStatus === 'FILLED' || orderStatus === 'EXPIRED') {
@@ -235,13 +238,10 @@ class GridBot {
                 
                 const lowestGridLevel = this.gridLevels[0]
                 const params = { positionSide: 'SHORT' }
-                const order = await this.exchange.createStopMarketOrder(
-                    this.pairName,
-                    'BUY',
-                    quantity,
-                    lowestGridLevel,
-                    params
-                )
+                const order = this.isBacktest ? 
+                    this.exchange.createStopMarketOrder(this.pairName, 'BUY', quantity, lowestGridLevel, params) : 
+                    await this.exchange.createStopMarketOrder(this.pairName, 'BUY', quantity, lowestGridLevel, params)
+                    
                 logger.info(chalk.cyan(`Placed order to close HEDGE SHORT position: ${order.type.toUpperCase()} BUY ${chalk.yellow(quantity)} ${this.pairName.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
             } else if (side === 'BUY') {
                 // Hedge close order filled, place hedge open order
@@ -251,13 +251,10 @@ class GridBot {
                 const shortEntryPrice = this.toPrecision(lowestGridLevel - this.gridStep)
                 
                 const params = { positionSide: 'SHORT' }
-                const order = await this.exchange.createStopMarketOrder(
-                    this.pairName,
-                    'SELL',
-                    quantity,
-                    shortEntryPrice,
-                    params
-                )
+                const order = this.isBacktest ? 
+                    this.exchange.createStopMarketOrder(this.pairName, 'SELL', quantity, shortEntryPrice, params) : 
+                    await this.exchange.createStopMarketOrder(this.pairName, 'SELL', quantity, shortEntryPrice, params)
+                    
                 logger.info(chalk.cyan(`Placed order to open HEDGE SHORT position: ${order.type.toUpperCase()} SELL ${chalk.yellow(quantity)} ${this.pairName.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
             }
         }
@@ -295,7 +292,7 @@ class GridBot {
             await this.exchange.initializeWebSocket()
             await this.exchange.subscribeToUserData()
 
-            if (!this.isBacktest) await wait(4000)
+            if (!this.isBacktest) await wait(1000) // live 4000, backtest 1000
 
             this.exchange.onOrderUpdate = this.handleOrderUpdate.bind(this)
             this.exchange.onPriceUpdate = this.onOrderbookBestBidAskUpdateEvent.bind(this)

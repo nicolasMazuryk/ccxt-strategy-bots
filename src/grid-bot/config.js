@@ -34,16 +34,16 @@ const defaultConfig = {
     // leverage: 5,
 
     pairName: 'ETH/USDT',
-    lowerPrice: 1760,
-    upperPrice: 1762,
+    lowerPrice: 1564,
+    upperPrice: 1570,
     pricePrecision: 2,
-    quantityPerGrid: 0.012,
+    quantityPerGrid: 0.01,
     marketType: 'linear', // spot, linear, hedge
     isInfiniteGrid: false,
-    isHedgeMode: true,
-    gridStep: 0.5,
-    stopLoss: 1750,
-    takeProfit: 1775, 
+    isHedgeMode: false,
+    gridStep: 1,
+    // stopLoss: 1750,
+    // takeProfit: 1775, 
     leverage: 2,
 
     // pairName: 'MINA/USDT',

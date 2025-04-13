@@ -71,7 +71,7 @@ async function filterAllMarketData(priceInterval, isStablecoin) {
 
         // Get all CSV files from raw directory
         const files = await fs.promises.readdir(SYMBOL_RAW_DATA_DIR)
-        const csvFiles = files.filter(file => file.endsWith('.csv'))
+        const csvFiles = files.filter(file => !file.startsWith('._') && file.endsWith('.csv'))
 
         if (csvFiles.length === 0) {
             throw new Error('No CSV files found in raw market data directory')
