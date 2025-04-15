@@ -23,11 +23,9 @@ class FuturesExchangeEmulator extends BaseEmulator {
             cummulativeFunding: 0,
         }
         
-        // Position parameters
-        this.positions = {}
+        this.positions = []
 
         this.leverage = 1
-        this.isHedgeMode = false
     }
 
     fetchBalance() {
@@ -39,9 +37,8 @@ class FuturesExchangeEmulator extends BaseEmulator {
                 totalMarginBalance: this.wallet.marginBalance.toFixed(8),
                 availableBalance: this.wallet.availableBalance.toFixed(8),
                 maxWithdrawAmount: this.wallet.availableBalance.toFixed(8),
-
-                positions: Object.entries(this.positions).map(([pairName, position]) => ({
-                    symbol: pairName.replace('/', ''),
+                positions: this.positions.map(position => ({
+                    symbol: position.pairName.replace('/', ''),
                     positionSide: position.positionSide,
                     positionAmt: position.positionAmount.toFixed(8),
                     unrealizedProfit: position.unrealizedPnL.toFixed(8),
@@ -64,7 +61,13 @@ class FuturesExchangeEmulator extends BaseEmulator {
     fetchWallet() {
         return {
             wallet: { ...this.wallet },
-            positions: { ...this.positions }
+            positions: this.positions.reduce((acc, position) => {
+                if (!acc[position.pairName]) {
+                    acc[position.pairName] = []
+                }
+                acc[position.pairName].push({ ...position })
+                return acc
+            }, {})
         }
     }
 
@@ -73,7 +76,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
     }
 
     setHedgeMode(symbol, isHedgeMode) {
-        this.isHedgeMode = isHedgeMode
+        logger.info(chalk.cyan(`HEDGE mode ${isHedgeMode ? 'Enabled' : 'Disabled'}`))
     }
 
     processNewPrice(pairName, price, timestamp) {
@@ -84,11 +87,15 @@ class FuturesExchangeEmulator extends BaseEmulator {
         this._updatePositionPnL(pairName, price)
     }
 
-    _initializePositionIfNotExists(pairName) {
-        if (!this.positions[pairName]) {
-            this.positions[pairName] = {
+    _initializePositionIfNotExists(pairName, positionSide) {
+        const existingPosition = this.positions.find(p => 
+            p.pairName === pairName && p.positionSide === positionSide
+        )
+        
+        if (!existingPosition) {
+            this.positions.push({
                 pairName,
-                positionSide: 'BOTH', // TODO: pass positionSide from grid-bot
+                positionSide,
                 positionAmount: 0,
                 entryPrice: 0,
                 liquidationPrice: 0,
@@ -97,27 +104,30 @@ class FuturesExchangeEmulator extends BaseEmulator {
                 notional: 0,
                 maintenanceMargin: 0,
                 leverage: this.leverage,
-            }
+            })
         }
     }
 
     _executeOrder(order, executionPrice, timestamp) {
         const [_, quoteAsset] = order.pairName.split('/')
         
-        this._initializePositionIfNotExists(order.pairName)
+        this._initializePositionIfNotExists(order.pairName, order.positionSide)
         
-        const position = this.positions[order.pairName]
+        const position = this.positions.find(p => p.pairName === order.pairName && p.positionSide === order.positionSide)
+
+        if (!order.positionSide || !position) throw new Error(`Position not found.`)
+        
         const orderDetails = this._calculateOrderDetails(order, executionPrice, position)
 
-        if (!this._validateMarginRequirements(order, orderDetails, quoteAsset)) return
+        if (!this._validateMarginRequirements(order, orderDetails)) return
         if (!this._validatePositionRisk(order, executionPrice)) return
 
         const oldPosition = { ...position }
         const realizedPnl = this._processPositionUpdate(order, position, executionPrice, oldPosition)
         
         this._updateBalance(orderDetails.feeCost, realizedPnl, quoteAsset)
-        this._updatePositionDetails(position, executionPrice, orderDetails)
-        this._updateWallet(position, executionPrice, orderDetails.feeCost)
+        this._updatePositionDetails(position, executionPrice)
+        this._updateWallet(position, executionPrice)
         this._logPositionUpdate(position, oldPosition, quoteAsset, order.pairName)
         
         this._updateOrderAfterExecution(order, timestamp, orderDetails.cost, orderDetails.fee, quoteAsset, realizedPnl)
@@ -126,7 +136,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
 
     _calculateOrderDetails(order, executionPrice, position) {
         const cost = order.quantity * executionPrice
-        const fee = ['MARKET', 'STOP_MARKET'].includes(order.type) ? this.takerFee : this.makerFee
+        const fee = order.type === 'MARKET' ? this.takerFee : this.makerFee
         const margin = cost / position.leverage
         const feeCost = cost * fee
         const maintenanceMargin = cost * getMaintenanceRate(order.pairName, cost)
@@ -134,10 +144,10 @@ class FuturesExchangeEmulator extends BaseEmulator {
         return { cost, fee, margin, feeCost, maintenanceMargin }
     }
 
-    _validateMarginRequirements(order, orderDetails, quoteAsset) {
-        const position = this.positions[order.pairName]
-        const unrealizedPnl = position.unrealizedPnL
-        const availableBalance = this.wallet.balance + unrealizedPnl
+    _validateMarginRequirements(order, orderDetails) {
+        const unrealizedPnl = this.positions.reduce((sum, pos) => sum + pos.unrealizedPnL, 0)
+        const totalMargin = this.positions.reduce((sum, pos) => sum + pos.margin, 0)
+        const availableBalance = this.wallet.balance + unrealizedPnl - totalMargin
         const requiredAmount = orderDetails.margin + orderDetails.feeCost
 
         if (availableBalance < requiredAmount) {
@@ -151,11 +161,13 @@ class FuturesExchangeEmulator extends BaseEmulator {
     }
 
     _validatePositionRisk(order, executionPrice) {
-        const position = this.positions[order.pairName]
+        const position = this.positions.find(p => p.pairName === order.pairName && p.positionSide === order.positionSide)
         
-        // Calculate total position value across all positions
-        const totalPositionValue = Object.values(this.positions).reduce((sum, pos) => {
-            if (pos.pairName === order.pairName) return sum
+        if (!order.positionSide || !position) throw new Error(`Position not found.`)
+
+        // Calculate total positions value across all positions, excluding the current order position
+        const totalPositionValueExcludingCurrent = this.positions.reduce((sum, pos) => {
+            if (pos.pairName === order.pairName && pos.positionSide === order.positionSide) return sum
             return sum + Math.abs(pos.positionAmount * this.currentPrices[pos.pairName])
         }, 0)
         
@@ -163,7 +175,7 @@ class FuturesExchangeEmulator extends BaseEmulator {
         const direction = order.side === 'BUY' ? 1 : -1
         const newPositionAmount = position.positionAmount + (direction * order.quantity)
         const newPositionValue = Math.abs(newPositionAmount * executionPrice)
-        const totalNewPositionValue = totalPositionValue + newPositionValue
+        const totalNewPositionValue = totalPositionValueExcludingCurrent + newPositionValue
         
         // Calculate max allowed position value based on available balance
         const availableBalance = this.wallet.balance + this.wallet.unrealizedPnL
@@ -207,7 +219,6 @@ class FuturesExchangeEmulator extends BaseEmulator {
     _updatePositionAmount(order, position) {
         const direction = order.side === 'BUY' ? 1 : -1
         position.positionAmount += direction * order.quantity
-        position.positionSide = position.positionAmount > 0 ? 'LONG' : position.positionAmount < 0 ? 'SHORT' : 'BOTH' // TODO: position side is set by grid-bot in parameters
     }
 
     _updateEntryPrice(position, oldPosition, order, executionPrice) {
@@ -232,15 +243,15 @@ class FuturesExchangeEmulator extends BaseEmulator {
         }
     }
 
-    _updateBalance(feeCost, realizedPnl) {
+    _updateBalance(feeCost, realizedPnl, quoteAsset) {
         if (realizedPnl) {
             this.wallet.balance += realizedPnl
             
             logger.debug(chalk.green(
-                `[PnL] Realized: ${realizedPnl} USDT`
-                + `\n      Fees: ${feeCost} USDT`
-                + `\n      Net: ${realizedPnl - feeCost} USDT`
-                + `\n      New Balance: ${this.wallet.balance} USDT`
+                `[PnL] Realized: ${realizedPnl} ${quoteAsset}`
+                + `\n      Fees: ${feeCost} ${quoteAsset}`
+                + `\n      Net: ${realizedPnl - feeCost} ${quoteAsset}`
+                + `\n      New Balance: ${this.wallet.balance} ${quoteAsset}`
             ))
         }
         this.wallet.balance -= feeCost
@@ -257,23 +268,30 @@ class FuturesExchangeEmulator extends BaseEmulator {
     }
 
     _updatePositionPnL(pairName, currentPrice) {
-        const position = this.positions[pairName] // TODO: process multiple positions
-        if (!position || position.positionAmount === 0) return
-
-        const priceDiff = currentPrice - position.entryPrice
-        const oldPnL = position.unrealizedPnL
-        position.unrealizedPnL = position.positionAmount * priceDiff
+        // Find positions for this pair
+        const pairPositions = this.positions.filter(p => p.pairName === pairName)
+        if (pairPositions.length === 0) return
         
-        this._updatePositionDetails(position, currentPrice)
-        this._updateWallet(position, currentPrice)
+        // Update all positions for this pair
+        pairPositions.forEach(position => {
+            if (position.positionAmount === 0) return
+            
+            const priceDiff = currentPrice - position.entryPrice
+            const oldPnL = position.unrealizedPnL
+            position.unrealizedPnL = position.positionAmount * priceDiff
+            
+            this._updatePositionDetails(position, currentPrice)
+            
+            if (Math.abs(position.unrealizedPnL - oldPnL) > 0.01) {
+                logger.debug(chalk.yellow(
+                    `[PnL] Update for ${pairName} ${position.positionSide}: ${position.unrealizedPnL} USDT`
+                    + `\n      Price: ${currentPrice}`
+                    + `\n      Liquidation Price: ${position.liquidationPrice}`
+                ))
+            }
+        })
         
-        if (Math.abs(position.unrealizedPnL - oldPnL) > 0.01) {
-            logger.debug(chalk.yellow(
-                `[PnL] Update for ${pairName}: ${position.unrealizedPnL} USDT`
-                + `\n      Price: ${currentPrice}`
-                + `\n      Liquidation Price: ${position.liquidationPrice}`
-            ))
-        }
+        this._updateWallet()
     }
 
     _checkLiquidation(pairName, price) {
@@ -281,11 +299,11 @@ class FuturesExchangeEmulator extends BaseEmulator {
         let totalMaintenanceMargin = 0
         let totalUnrealizedPnL = 0
 
-        for (const [pair, position] of Object.entries(this.positions)) {
+        for (const position of this.positions) {
             if (position.positionAmount === 0) continue
             
-            const currentPrice = pair === pairName ? price : this.currentPrices[pair]
-            const mmRate = getMaintenanceRate(pair, Math.abs(position.positionAmount * currentPrice))
+            const currentPrice = this.currentPrices[position.pairName]
+            const mmRate = getMaintenanceRate(position.pairName, Math.abs(position.positionAmount * currentPrice))
             const positionMaintenanceMargin = Math.abs(position.positionAmount * currentPrice * mmRate)
             const positionUnrealizedPnL = position.positionAmount * (currentPrice - position.entryPrice)
             
@@ -304,23 +322,25 @@ class FuturesExchangeEmulator extends BaseEmulator {
 
     _handleLiquidation(pairName, price) {
         // Close all positions when liquidation occurs
-        for (const [pair, position] of Object.entries(this.positions)) {
+        for (const position of this.positions) {
             if (position.positionAmount === 0) continue
             
-            const currentPrice = pair === pairName ? price : this.currentPrices[pair]
+            const currentPrice = this.currentPrices[position.pairName]
             
             logger.info(chalk.red(
-                `[LIQUIDATION] Position liquidated at ${currentPrice} for ${pair}`
+                `[LIQUIDATION] Position liquidated at ${currentPrice} for ${position.pairName}`
+                + `\n             Side: ${position.positionSide}`
                 + `\n             Size: ${position.positionAmount}`
                 + `\n             Entry: ${position.entryPrice}`
             ))
 
             const liquidationOrder = {
-                pairName: pair,
+                pairName: position.pairName,
                 side: position.positionAmount > 0 ? 'SELL' : 'BUY',
                 quantity: Math.abs(position.positionAmount),
                 type: 'MARKET',
-                timestamp: this.currentTimestamp
+                timestamp: this.currentTimestamp,
+                positionSide: position.positionSide
             }
 
             this._executeOrder(liquidationOrder, currentPrice, this.currentTimestamp)
@@ -343,12 +363,12 @@ class FuturesExchangeEmulator extends BaseEmulator {
         }
     }
 
-    _updateWallet(position, price) {
+    _updateWallet() {
         // Calculate total values across all positions
-        const totalUnrealizedPnL = Object.values(this.positions).reduce((sum, pos) => sum + pos.unrealizedPnL, 0)
-        const totalPositionValue = Object.values(this.positions).reduce((sum, pos) => sum + Math.abs(pos.positionAmount * this.currentPrices[pos.pairName]), 0)
-        const totalMargin = Object.values(this.positions).reduce((sum, pos) => sum + pos.margin, 0)
-        const totalMaintenanceMargin = Object.values(this.positions).reduce((sum, pos) => sum + pos.maintenanceMargin, 0)
+        const totalUnrealizedPnL = this.positions.reduce((sum, pos) => sum + pos.unrealizedPnL, 0)
+        const totalPositionValue = this.positions.reduce((sum, pos) => sum + Math.abs(pos.positionAmount * this.currentPrices[pos.pairName]), 0)
+        const totalMargin = this.positions.reduce((sum, pos) => sum + pos.margin, 0)
+        const totalMaintenanceMargin = this.positions.reduce((sum, pos) => sum + pos.maintenanceMargin, 0)
 
         // Update wallet with aggregated values
         this.wallet.unrealizedPnL = totalUnrealizedPnL

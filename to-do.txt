@@ -1,7 +1,7 @@
 1. Make sure Lambda slack notification is working
 
 - Hedge Mode:
-[] implement Infinity Mode for Hedge Mode
+[] Implement Infinity Mode for Hedge Mode
 [] hedge only the quantity utilized by grid (currently all grid quantity is hedged) -> Not for now. It will require to update hedge order everytime the new level above is filled. A lot of logic to test. Do it when grid-bot is successful!!!
 
 - Hedge Mode risk-calculator: add Hedge costs - difference between hedge levels + commission
@@ -35,6 +35,8 @@ REAL BACKTESTING
 // Modify the Infinite Grid mode so that it always trails below the highest high. For example, if the price updates to a new highest high, the Infinite Grid bot should adjust its level so that the upperLevel is 5% (configurable as an environment variable) below the highest high price.
 // The Stop-Loss should trail accordingly, while the Take-Profit remains unchanged.
 
+
+- Do not _validateMarginRequirements() for "reduce only" orders (pass it as parameters)
 
 
 6. Move try/catch and logging from grid-bot.js to binance-exchange.js
@@ -70,6 +72,7 @@ Add backtesting period in days to statistics (16 days, 5h)
 5. (if error appears) Handle CCXT RequestTimeout gracefully: https://docs.ccxt.com/#/README?id=requesttimeout
 6. SPOT: Error during shutdown while trying to Sell remaining dust 0.01 ACT at market price. Place market sell order only if it is greater than min_notional and min_quantity.
 8. Test FUTURES use case: whether enough leverage and margin in case default StopLoss and TakeProfit full reduceOnly grid quantity is reserved. Remove default StopLoss and TakeProfit if needed.
+9. Maybe: calculate liqudationPrice based on the position quantity as a share of all positions
 
 
 

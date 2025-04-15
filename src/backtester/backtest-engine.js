@@ -16,7 +16,7 @@ class BacktestEngine {
         this.maxWalletActualLeverage = 0
         this.maxLiquidations = 0
 
-        this.positions = {}
+        this.positions = []
 
         this.peak = initialEquity
         this.drawdown = 0
@@ -44,7 +44,7 @@ class BacktestEngine {
             maxWalletActualLeverage: this.maxWalletActualLeverage,
             maxLiquidations: this.maxLiquidations,
 
-            positions: { ...this.positions },
+            positions: [ ...this.positions ],
 
             drawdown: this.drawdown,
             drawdownPercent: (this.drawdown / this.peak) * 100,
@@ -88,17 +88,19 @@ class BacktestEngine {
     }
 
     _updatePositionMetrics(positions, currentPrice) {
-        for (const [pairName, position] of Object.entries(positions)) {
-            // Initialize metrics for new positions
-            if (!this.positions[pairName]) {
-                this.positions[pairName] = {
+        for (const position of Object.values(positions).flat()) {
+            let metrics = this.positions.find(p => p.pairName === position.pairName && p.positionSide === position.positionSide)
+            
+            if (!metrics) {
+                metrics = {
+                    pairName: position.pairName,
+                    positionSide: position.positionSide,
                     maxPositionSize: 0,
-                    maxPositionValue: 0,
+                    maxPositionValue: 0, 
                     maxLiquidationDistance: Number.POSITIVE_INFINITY
                 }
+                this.positions.push(metrics)
             }
-
-            const metrics = this.positions[pairName]
 
             metrics.maxPositionSize = Math.max(metrics.maxPositionSize, Math.abs(position.positionAmount))
             
@@ -181,7 +183,7 @@ class BacktestEngine {
         const tradesPath = path.join(outputDir, `${symbol}-trades.csv`)
         const tradeHeaders = [
             'pairName',
-            'positionType', 
+            'positionSide', 
             'status',
             'entryPrice',
             'exitPrice',

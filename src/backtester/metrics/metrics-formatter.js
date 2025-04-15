@@ -94,14 +94,22 @@ class MetricsFormatter {
         ]
 
         // Add per-position metrics section if positions exist
-        if (m.positions) {
-            for (const [pairName, posMetrics] of Object.entries(m.positions)) {
+        if (m.positions?.length > 0) {
+            for (const posMetrics of m.positions) {
+                const positionPnL = m.positionsPnL[posMetrics.pairName][posMetrics.positionSide]
+
                 sections.push({
-                    title: `Position Metrics - ${pairName}`,
+                    title: `Position Metrics - ${posMetrics.pairName} ${posMetrics.positionSide}`,
                     metrics: [
-                        ['Max Position Size', this.formatNumber(posMetrics.maxPositionSize, 4), pairName.split('/')[0]],
+                        ['Max Position Size', this.formatNumber(posMetrics.maxPositionSize, 4), posMetrics.pairName.split('/')[0]],
                         ['Max Position Value', this.formatCurrency(posMetrics.maxPositionValue), ''],
-                        ['Max Liquidation Distance', this.formatPercentage(posMetrics.maxLiquidationDistance), '']
+                        ['Max Liquidation Distance', this.formatPercentage(posMetrics.maxLiquidationDistance), ''],
+                        ['-------', '-------', '-------'],
+                        ['Closed Trades', positionPnL.count.toString(), ''],
+                        ['Average Trade', this.formatCurrency((positionPnL.realizedPnL + positionPnL.commission) / positionPnL.count), ''],
+                        ['Realized P&L', this.formatCurrency(positionPnL.realizedPnL), ''],
+                        ['Commission', this.formatCurrency(positionPnL.commission), ''],
+                        ['Total', this.formatCurrency(positionPnL.realizedPnL + positionPnL.commission), ''],
                     ]
                 })
             }

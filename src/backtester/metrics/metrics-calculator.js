@@ -19,6 +19,7 @@ class MetricsCalculator {
         this.calculateTradingActivityMetrics()
         this.calculatePositionSizingMetrics()
         this.calculateFeeMetrics()
+        this.calculatePositionsPnLMetrics()
         return this.metrics
     }
 
@@ -247,14 +248,7 @@ class MetricsCalculator {
             wasLiquidated: lastPoint.maxLiquidations > 0,
             
             // Add per-position metrics
-            positions: Object.entries(lastPoint.positions).reduce((acc, [pairName, metrics]) => {
-                acc[pairName] = {
-                    maxPositionSize: metrics.maxPositionSize,
-                    maxPositionValue: metrics.maxPositionValue,
-                    maxLiquidationDistance: metrics.maxLiquidationDistance
-                }
-                return acc
-            }, {})
+            positions: lastPoint.positions
         })
     }
 
@@ -267,6 +261,23 @@ class MetricsCalculator {
                 percentage: (commissionPaid / this.initialEquity) * 100
             },
         })
+    }
+
+    calculatePositionsPnLMetrics() {
+        const positionsPnL = this.closedTrades.reduce((acc, trade) => {
+            if (!acc[trade.pairName]) {
+                acc[trade.pairName] = {
+                    LONG: { count: 0, commission: 0, realizedPnL: 0 },
+                    SHORT: { count: 0, commission: 0, realizedPnL: 0 }
+                }
+            }
+            acc[trade.pairName][trade.positionSide].count++
+            acc[trade.pairName][trade.positionSide].commission += trade.commission
+            acc[trade.pairName][trade.positionSide].realizedPnL += trade.realizedPnL
+            return acc
+        }, {})
+        
+        Object.assign(this.metrics, { positionsPnL })
     }
 
     // Helper methods

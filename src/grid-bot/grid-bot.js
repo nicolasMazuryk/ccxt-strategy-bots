@@ -234,7 +234,7 @@ class GridBot {
         if (isHedgeOrder) {
             if (side === 'SELL') {
                 // Hedge open order filled, place hedge close order
-                logger.info(chalk.cyan(`Hedge SHORT position opened at ${chalk.yellow(stopPrice)}. Placing hedge close order...`))
+                logger.info(chalk.cyan(`Hedge SHORT position OPENED at ${chalk.yellow(stopPrice)}. Placing hedge close order...`))
                 
                 const lowestGridLevel = this.gridLevels[0]
                 const params = { positionSide: 'SHORT' }
@@ -245,7 +245,7 @@ class GridBot {
                 logger.info(chalk.cyan(`Placed order to close HEDGE SHORT position: ${order.type.toUpperCase()} BUY ${chalk.yellow(quantity)} ${this.pairName.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
             } else if (side === 'BUY') {
                 // Hedge close order filled, place hedge open order
-                logger.info(chalk.cyan(`Hedge SHORT position closed at ${chalk.yellow(stopPrice)}. Placing hedge open order...`))
+                logger.info(chalk.cyan(`Hedge SHORT position CLOSED at ${chalk.yellow(stopPrice)}. Placing hedge open order...`))
                 
                 const lowestGridLevel = this.gridLevels[0]
                 const shortEntryPrice = this.toPrecision(lowestGridLevel - this.gridStep)

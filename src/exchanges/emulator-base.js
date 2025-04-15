@@ -142,10 +142,8 @@ class BaseEmulator extends BaseExchange {
             stopPrice: stopPrice,
             orderStatus: 'NEW',
             quantity,
-            originalQuantity: quantity,
             pairName,
-            type: 'MARKET',
-            originalOrderType: 'STOP_MARKET',
+            type: 'STOP_MARKET',
             timestamp: this.currentTimestamp,
             ...params
         }
@@ -172,11 +170,29 @@ class BaseEmulator extends BaseExchange {
     _matchOrders(pairName, price, timestamp) {
         this.orders
             .filter(order => order.orderStatus === 'NEW' && order.pairName === pairName)
+            .map(order => {
+                const isStopTriggered = (
+                    (order.side === 'BUY' && price >= order.stopPrice) ||
+                    (order.side === 'SELL' && price <= order.stopPrice)
+                )
+
+                if (isStopTriggered && ['STOP_MARKET', 'STOP_LIMIT'].includes(order.type)) {
+                    order.originalQuantity = order.quantity
+                    order.originalOrderType = order.type
+                    order.type = order.type === 'STOP_MARKET' ? 'MARKET' : 'LIMIT'
+                }
+                
+                return order
+            })
             .forEach(order => {
-                if (order.side === 'BUY' && price < order.price) {
-                    this._executeOrder(order, order.price, timestamp)
-                } else if (order.side === 'SELL' && price > order.price) {
-                    this._executeOrder(order, order.price, timestamp)
+                if (order.type === 'LIMIT') {
+                    if (order.side === 'BUY' && price < order.price) {
+                        this._executeOrder(order, order.price, timestamp)
+                    } else if (order.side === 'SELL' && price > order.price) {
+                        this._executeOrder(order, order.price, timestamp)
+                    }
+                } else if (order.type === 'MARKET') {
+                    this._executeOrder(order, price, timestamp)
                 }
             })
     }
@@ -205,29 +221,12 @@ class BaseEmulator extends BaseExchange {
             this.openTrades.short[trade.pairName] = []
         }
 
-        if (trade.side === 'BUY') {
-            const openShorts = this.openTrades.short[trade.pairName]
-            
-            if (openShorts.length > 0) {
-                // Close SHORT position (LIFO)
-                const openTrade = openShorts.pop()
-
-                this.closedTrades.push(Object.assign(openTrade, {
-                    status: 'CLOSED',
-                    
-                    exitTrade: trade,
-                    exitPrice: trade.price,
-                    exitTimestamp: trade.executionTimestamp,
-                    
-                    realizedPnL: openTrade.realizedPnL + trade.realizedPnL,
-                    commission: openTrade.commission + trade.commission,
-                    dust: openTrade.entryTrade.quantity - trade.quantity,
-                }))
-            } else {
-                // Open LONG position
+        if (trade.positionSide === 'LONG') {
+            if (trade.side === 'BUY') {
+                // Open/Add to LONG position
                 const openTrade = {
                     pairName: trade.pairName,
-                    positionType: 'LONG', 
+                    positionSide: 'LONG', 
                     status: 'OPEN',
                     
                     entryTrade: trade,
@@ -239,30 +238,32 @@ class BaseEmulator extends BaseExchange {
                     dust: 0
                 }
                 this.openTrades.long[trade.pairName].push(openTrade)
-            }
-        } else if (trade.side === 'SELL') {
-            const openLongs = this.openTrades.long[trade.pairName]
+            } else if (trade.side === 'SELL') {
+                const openLongs = this.openTrades.long[trade.pairName]
             
-            if (openLongs.length > 0) {
-                // Close LONG position (LIFO)
-                const openTrade = openLongs.pop()
-
-                this.closedTrades.push(Object.assign(openTrade, {
-                    status: 'CLOSED',
-                    
-                    exitTrade: trade,
-                    exitPrice: trade.price,
-                    exitTimestamp: trade.executionTimestamp,
-                    
-                    realizedPnL: openTrade.realizedPnL + trade.realizedPnL,
-                    commission: openTrade.commission + trade.commission,
-                    dust: openTrade.entryTrade.quantity - trade.quantity,
-                }))
-            } else {
-                // Open SHORT position
+                if (openLongs.length > 0) {
+                    // Close/Reduce LONG position (LIFO)
+                    const openTrade = openLongs.pop()
+    
+                    this.closedTrades.push(Object.assign(openTrade, {
+                        status: 'CLOSED',
+                        
+                        exitTrade: trade,
+                        exitPrice: trade.price,
+                        exitTimestamp: trade.executionTimestamp,
+                        
+                        realizedPnL: openTrade.realizedPnL + trade.realizedPnL,
+                        commission: openTrade.commission + trade.commission,
+                        dust: openTrade.entryTrade.quantity - trade.quantity,
+                    }))
+                }
+            }
+        } else if (trade.positionSide === 'SHORT') {
+            if (trade.side === 'SELL') {
+                // Open/Add to SHORT position
                 const openTrade = {
                     pairName: trade.pairName,
-                    positionType: 'SHORT',
+                    positionSide: 'SHORT',
                     status: 'OPEN',
                     
                     entryTrade: trade,
@@ -274,6 +275,25 @@ class BaseEmulator extends BaseExchange {
                     dust: 0
                 }
                 this.openTrades.short[trade.pairName].push(openTrade)
+            } else if (trade.side === 'BUY') {
+                const openShorts = this.openTrades.short[trade.pairName]
+            
+                if (openShorts.length > 0) {
+                    // Close/Reduce SHORT position (LIFO)
+                    const openTrade = openShorts.pop()
+    
+                    this.closedTrades.push(Object.assign(openTrade, {
+                        status: 'CLOSED',
+                        
+                        exitTrade: trade,
+                        exitPrice: trade.price,
+                        exitTimestamp: trade.executionTimestamp,
+                        
+                        realizedPnL: openTrade.realizedPnL + trade.realizedPnL,
+                        commission: openTrade.commission + trade.commission,
+                        dust: openTrade.entryTrade.quantity - trade.quantity,
+                    }))
+                }
             }
         }
     }
@@ -281,12 +301,14 @@ class BaseEmulator extends BaseExchange {
     cancelOrdersBelowPrice(pairName, price) {
         const canceledOrders = this.orders.filter(order => 
             order.pairName === pairName && 
+            order.positionSide === 'LONG' &&
             order.orderStatus === 'NEW' &&
             order.price <= price
         )
         
         this.orders = this.orders.filter(order => 
             order.pairName !== pairName || 
+            order.positionSide !== 'LONG' ||
             order.orderStatus !== 'NEW' ||
             order.price > price
         )
