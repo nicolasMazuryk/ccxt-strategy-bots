@@ -60,11 +60,11 @@ async function runBacktest() {
 
             // Progress bar
             counter++
-            // const progress = updateProgressBar(counter, marketData.length)
+            const progress = updateProgressBar(counter, marketData.length)
             
-            // if (progress.shouldUpdate) {
-            //     logger.info(`Progress: [${progress.progressBar}] ${progress.percentage}% (${progress.counter}/${progress.total})`)
-            // }
+            if (progress.shouldUpdate) {
+                logger.info(`Progress: [${progress.progressBar}] ${progress.percentage}% (${progress.counter}/${progress.total})`)
+            }
         }
 
         if (engine) {

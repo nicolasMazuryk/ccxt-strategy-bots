@@ -173,7 +173,7 @@ class GridBot {
 
     async placeBuyOrder(price) {
         try {
-            const params = this.isHedgeMode ? { positionSide: 'LONG' } : {}
+            const params = this.isHedgeMode || this.isBacktest ? { positionSide: 'LONG' } : {}
             const order = this.isBacktest
                 ? this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price, params)
                 : await this.exchange.createLimitBuyOrder(this.pairName, this.quantityPerGrid, price, params)
@@ -187,7 +187,7 @@ class GridBot {
 
     async placeSellOrder(price) {
         try {
-            const params = this.isHedgeMode ? { positionSide: 'LONG' } : { reduceOnly: true }
+            const params = this.isHedgeMode || this.isBacktest ? { positionSide: 'LONG' } : { reduceOnly: true }
             const order = this.isBacktest
                 ? this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price, params)
                 : await this.exchange.createLimitSellOrder(this.pairName, this.quantityPerGrid, price, params)
@@ -222,7 +222,7 @@ class GridBot {
         const orderStatus = order.orderStatus
         const side = order.side || order.orderSide
         const stopPrice = order.stopPrice || order.triggerPrice
-        const quantity = order.originalQuantity || this.calculateCapitalAndQuantityTotals().totalQuantity
+        const quantity = order.originalQuantity
         const positionSide = order.positionSide
         
         const isHedgeOrder = 
@@ -310,7 +310,7 @@ class GridBot {
             }
 
             if (!this.isBacktest && this.exchange.marketType === 'linear') {
-                const params = this.isHedgeMode ? { positionSide: 'LONG' } : { reduceOnly: true }
+                const params = this.isHedgeMode || this.isBacktest ? { positionSide: 'LONG' } : { reduceOnly: true }
                 if (this.stopLoss) await this.exchange.createStopLossOrder(this.pairName, 'SELL', totalQuantity, this.stopLoss, { ...params }) // use ... spread to avoid mutation later internally in the library
                 if (this.takeProfit) await this.exchange.createTakeProfitOrder(this.pairName, 'SELL', totalQuantity, this.takeProfit, { ...params }) // use ... spread to avoid mutation later internally in the library
             }
@@ -391,7 +391,7 @@ class GridBot {
                     if (position && positionAmount !== 0) {
                         logger.info(chalk.yellow(`Closing futures ${positionSide} position of ${positionAmount} ${baseAsset}...`))
 
-                        const params = this.isHedgeMode ? { positionSide: position?.positionSide } : { reduceOnly: true }
+                        const params = this.isHedgeMode || this.isBacktest ? { positionSide: position?.positionSide } : { reduceOnly: true }
 
                         const exitOrder = positionAmount > 0 ? 
                             await this.exchange.createMarketSellOrder(this.pairName, Math.abs(positionAmount), params) :

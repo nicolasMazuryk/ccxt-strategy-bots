@@ -9,15 +9,15 @@ const riskConfig = {
     investedAmount: 1000,
     tradingFee: 0.000, // 0.0002
     maintenanceMarginRate: 0.0065,
-    pricePrecision: 1,
-    leverage: 1,
+    pricePrecision: 2,
+    leverage: 2,
 
     // gridNumber: 100,
 
-    gridStep: 400,
-    lowerPrice: 16000,
-    upperPrice: 18000,
-    quantityPerGrid: 0.01110,
+    gridStep: 5,
+    lowerPrice: 1900,
+    upperPrice: 2300,
+    quantityPerGrid: 0.01,
 }
 
 const defaultConfig = {
@@ -34,17 +34,17 @@ const defaultConfig = {
     // leverage: 5,
 
     pairName: 'ETH/USDT',
-    lowerPrice: 1643,
-    upperPrice: 1648,
+    lowerPrice: 3200,
+    upperPrice: 3250,
     pricePrecision: 2,
-    quantityPerGrid: 0.01,
+    quantityPerGrid: 0.055,
     marketType: 'linear', // spot, linear, hedge
     isInfiniteGrid: false,
     isHedgeMode: true,
-    gridStep: 1,
-    // stopLoss: 1750,
+    gridStep: 10,
+    // stopLoss: 2145,
     // takeProfit: 1775, 
-    leverage: 2,
+    leverage: 4,
 
     // pairName: 'MINA/USDT',
     // pricePrecision: 4,

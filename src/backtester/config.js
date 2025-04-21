@@ -10,7 +10,7 @@ const PAIR_NAME = 'ETH/USDT'
 
 // const START_DATE = '2021-09-10' // USDP/USDT market data availability
 const START_DATE = '2025-04-01'
-const END_DATE = '2025-04-13'
+const END_DATE = '2025-04-20'
 // =========================
 
 const SYMBOL = PAIR_NAME.replace('/', '')
@@ -41,8 +41,8 @@ const IS_STABLECOIN = false
 // const START_PERIOD_TIME = '2023-02-01T00:00:00+00:00'
 // const END_PERIOD_TIME = '2023-02-28T23:59:00+00:00'
 
-const START_PERIOD_TIME = '2025-04-13T00:01:00+00:00'
-const END_PERIOD_TIME = '2025-04-13T00:08:00+00:00'
+const START_PERIOD_TIME = '2024-12-01T00:00:00+00:00'
+const END_PERIOD_TIME = '2024-12-31T23:59:00+00:00'
 // const END_PERIOD_TIME = '2023-12-31T23:59:00+00:00'
 
 const MAKER_FEE = 0.0000 // 0.1%
