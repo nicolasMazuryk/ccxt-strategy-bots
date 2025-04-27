@@ -30,6 +30,18 @@
             "runtimeArgs": [
                 "--max-old-space-size=8192"
             ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Funding Arbitrage",
+            "env": {
+                "IS_VSCODE_DEBUGGER": "true"
+            },
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/src/funding-arbitrage/funding.js"
         }
     ]
 }
