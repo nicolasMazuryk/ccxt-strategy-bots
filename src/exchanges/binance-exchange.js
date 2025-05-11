@@ -37,7 +37,14 @@ class BinanceExchange extends BaseExchange {
         
         const formattedSymbol = symbol.replace('/', '')
         await retry(async () => this.exchange.setPositionMode(isHedgeMode, formattedSymbol))
-        logger.info(chalk.green(`Hedge mode ${isHedgeMode ? 'enabled' : 'disabled'} for ${formattedSymbol}`))
+        logger.info(chalk.green(`[Exchange ${formattedSymbol}] Hedge mode ${isHedgeMode ? 'enabled' : 'disabled'}`))
+    }
+
+    async createLimitOrder(symbol, side, quantity, price, params = {}) {
+        const order = await retry(async () => this.exchange.createLimitOrder(symbol, side, quantity, price, params))
+        
+        logger.info(chalk.cyan(`[Exchange ${symbol}] Placed ${order.type.toUpperCase()} order: ${side} ${chalk.yellow(quantity)} @ ${chalk.yellow(price)}`))
+        return order
     }
 
     async createLimitBuyOrder(symbol, quantity, price, params = {}) {
@@ -72,33 +79,33 @@ class BinanceExchange extends BaseExchange {
         })
         
         this.wsClient.on('open', (data) => {
-            logger.info(chalk.green(`WebSocket connection opened: ${data.wsKey} - ${data.ws.target.url}`))
+            logger.info(chalk.green(`[Exchange] WebSocket connection opened: ${data.wsKey} - ${data.ws.target.url}`))
         })
         
         this.wsClient.on('reconnecting', (data) => {
-            logger.warn(chalk.yellow(`WebSocket reconnecting... Channel: ${data?.wsKey}`))
+            logger.warn(chalk.yellow(`[Exchange] WebSocket reconnecting... Channel: ${data?.wsKey}`))
         })
         
         this.wsClient.on('reconnected', (data) => {
             if (typeof data?.wsKey === 'string' && data.wsKey.toLowerCase().includes('userdata')) {
-                logger.info(chalk.green('ws for user data stream has reconnected ', data?.wsKey))
+                logger.info(chalk.green(`[Exchange] ws for user data stream has reconnected: ${data?.wsKey}`))
             } else {
-                logger.info(chalk.green(`WebSocket reconnected: ${data?.wsKey}`))
+                logger.info(chalk.green(`[Exchange] WebSocket reconnected: ${data?.wsKey}`))
             }
         })
         
         this.wsClient.on('error', (data) => {
-            logger.error(chalk.red(`WebSocket ERROR on channel ${data?.wsKey}`))
+            logger.error(chalk.red(`[Exchange] WebSocket ERROR on channel ${data?.wsKey}`))
         })
     }
 
     async subscribeToUserData() {
         if (this.marketType === 'spot') {
-            logger.info(chalk.cyan('Subscribing to spot user data stream...'))
+            logger.info(chalk.cyan(`[Exchange] Subscribing to spot user data stream...`))
             await this.wsClient.subscribeSpotUserDataStream()
         }
         if (this.marketType === 'linear') {
-            logger.info(chalk.cyan('Subscribing to USDM futures user data stream...'))
+            logger.info(chalk.cyan(`[Exchange] Subscribing to USDM futures user data stream...`))
             await this.wsClient.subscribeUsdFuturesUserDataStream()
         }
     }
@@ -106,17 +113,21 @@ class BinanceExchange extends BaseExchange {
     async subscribeToBookTicker(symbol) {
         const formattedSymbol = symbol.replace('/', '')
         if (this.marketType === 'spot') {
-            logger.info(chalk.cyan('Subscribing to spot book ticker...'))
+            logger.info(chalk.cyan(`[Exchange ${formattedSymbol}] Subscribing to spot book ticker...`))
             await this.wsClient.subscribeSymbolBookTicker(formattedSymbol, 'spot')
         }
         if (this.marketType === 'linear') {
-            logger.info(chalk.cyan('Subscribing to futures book ticker...'))
+            logger.info(chalk.cyan(`[Exchange ${formattedSymbol}] Subscribing to futures book ticker...`))
             await this.wsClient.subscribeSymbolBookTicker(formattedSymbol, 'usdm')
         }
     }
 
     async closeAll() {
         this.wsClient.closeAll()
+    }
+
+    async cancelOrders(symbol, ids) {
+        return retry(async () => this.exchange.cancelOrders(ids, symbol))
     }
 
     async cancelAllOrders(symbol) {
@@ -129,6 +140,10 @@ class BinanceExchange extends BaseExchange {
 
     async setLeverage(symbol, leverage) {
         return retry(async () => this.exchange.setLeverage(leverage, symbol))
+    }
+
+    async createMarketOrder(symbol, side, quantity, params = {}) {
+        return retry(async () => this.exchange.createMarketOrder(symbol, side, quantity, undefined, params))
     }
 
     async createMarketBuyOrder(symbol, amount, params = {}) {
@@ -150,12 +165,14 @@ class BinanceExchange extends BaseExchange {
                 stopLossPrice,
                 params
             ))
-            logger.info(chalk.cyan(`Placed Stop-Loss order: ${order.type.toUpperCase()} ${side} ${chalk.yellow(amount)} ${symbol.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
+            logger.info(chalk.cyan(`[Exchange ${symbol}] Placed Stop-Loss order: ${order.type.toUpperCase()} ${side} ${chalk.yellow(amount)} @ ${chalk.yellow(order.stopPrice)}`))
             return order
         } catch (error) {
-            if (await this.handleStopMarketOrderWouldTriggerImmediatelyError(error, symbol, side, amount, params, 'Stop-Loss')) return
+            const immidiatellyTriggeredMarketOrder = await this.handleStopMarketOrderWouldTriggerImmediatelyError(error, symbol, side, amount, params, 'Stop-Loss')
 
-            logger.error(chalk.red(`Failed to place Stop-Loss order: ${error.message}`))
+            if (immidiatellyTriggeredMarketOrder) return immidiatellyTriggeredMarketOrder
+
+            logger.error(chalk.red(`[Exchange ${symbol}] Failed to place Stop-Loss order: ${error.message}`))
             throw error
         }
     }
@@ -171,12 +188,14 @@ class BinanceExchange extends BaseExchange {
                 takeProfitPrice,
                 params
             ))
-            logger.info(chalk.cyan(`Placed Take-Profit order: ${order.type.toUpperCase()} ${side} ${chalk.yellow(amount)} ${symbol.split('/')[0]} @ ${chalk.yellow(order.stopPrice)}`))
+            logger.info(chalk.cyan(`[Exchange ${symbol}] Placed Take-Profit order: ${order.type.toUpperCase()} ${side} ${chalk.yellow(amount)} @ ${chalk.yellow(order.stopPrice)}`))
             return order
         } catch (error) {
-            if (await this.handleStopMarketOrderWouldTriggerImmediatelyError(error, symbol, side, amount, params, 'Take-Profit')) return
+            const immidiatellyTriggeredMarketOrder = await this.handleStopMarketOrderWouldTriggerImmediatelyError(error, symbol, side, amount, params, 'Take-Profit')
 
-            logger.error(chalk.red(`Failed to place Take-Profit order: ${error.message}`))
+            if (immidiatellyTriggeredMarketOrder) return immidiatellyTriggeredMarketOrder
+
+            logger.error(chalk.red(`[Exchange ${symbol}] Failed to place Take-Profit order: ${error.message}`))
             throw error
         }
     }
@@ -191,11 +210,14 @@ class BinanceExchange extends BaseExchange {
                 undefined,
                 { ...params, triggerPrice: stopPrice }
             ))
+            logger.info(chalk.cyan(`[Exchange ${symbol}] Placed Stop-Market order: ${order.type.toUpperCase()} ${side} ${chalk.yellow(amount)} @ ${chalk.yellow(order.stopPrice)}`))
             return order
         } catch (error) {
-            if (await this.handleStopMarketOrderWouldTriggerImmediatelyError(error, symbol, side, amount, params, 'Stop-Market')) return
+            const immidiatellyTriggeredMarketOrder = await this.handleStopMarketOrderWouldTriggerImmediatelyError(error, symbol, side, amount, params, 'Stop-Market')
 
-            logger.error(chalk.red(`Failed to place Stop-Market order: ${error.message}`))
+            if (immidiatellyTriggeredMarketOrder) return immidiatellyTriggeredMarketOrder
+
+            logger.error(chalk.red(`[Exchange ${symbol}] Failed to place Stop-Market order: ${error.message}`))
             throw error
         }
     }
@@ -223,8 +245,8 @@ class BinanceExchange extends BaseExchange {
             delete params.stopLossPrice
             delete params.takeProfitPrice
 
-            logger.warn(chalk.yellow(`Failed to place ${orderType.toUpperCase()} order - Stop price would trigger immediately. Placing simple MARKET order instead...`))
-            logger.warn(chalk.yellow(`MARKET order params: symbol=${symbol}, side=${side}, amount=${amount}, params=${JSON.stringify(params)}`))
+            logger.warn(chalk.yellow(`[Exchange ${symbol}] Failed to place ${orderType.toUpperCase()} order - Stop price would trigger immediately. Placing simple MARKET order instead...`))
+            logger.warn(chalk.yellow(`[Exchange ${symbol}] MARKET order params: side=${side}, amount=${amount}, params=${JSON.stringify(params)}`))
             
             const order = await retry(async () => this.exchange.createOrder(
                 symbol,
@@ -234,6 +256,7 @@ class BinanceExchange extends BaseExchange {
                 undefined,
                 params
             ))
+            logger.info(chalk.cyan(`[Exchange ${symbol}] Placed MARKET order: ${order.type.toUpperCase()} ${side} ${chalk.yellow(amount)}`))
             return order
         }
 

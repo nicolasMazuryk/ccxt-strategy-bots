@@ -34,14 +34,14 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Funding Arbitrage",
+            "name": "Funding Bot",
             "env": {
                 "IS_VSCODE_DEBUGGER": "true"
             },
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/src/funding-arbitrage/funding.js"
+            "program": "${workspaceFolder}/src/funding-bot/run.js"
         }
     ]
 }
