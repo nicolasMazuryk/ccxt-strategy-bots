@@ -34,7 +34,7 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Funding Bot",
+            "name": "Funding Sniper Bot",
             "env": {
                 "IS_VSCODE_DEBUGGER": "true"
             },
@@ -42,6 +42,18 @@
                 "<node_internals>/**"
             ],
             "program": "${workspaceFolder}/src/funding-bot/run.js"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Funding Spot Perp Bot",
+            "env": {
+                "IS_VSCODE_DEBUGGER": "true"
+            },
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/src/funding-arbitrage/funding-spot-perp.js"
         }
     ]
 }

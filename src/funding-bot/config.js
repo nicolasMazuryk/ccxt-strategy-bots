@@ -16,7 +16,7 @@ const defaultConfig = {
     negativeFundingRateThreshold: -0.002, // 0.01%
     absoluteFundingRateThreshold: 0.002, // 0.01%
 
-    fundingPairsLimit: 5,
+    fundingPairsLimit: 1,
 
     // BOT PARAMETERS
     commission: 0.0005 + 0.0002, // 0.07%
@@ -36,9 +36,9 @@ const defaultConfig = {
     // LP = Funding Loss Delta Profit
     LP_MinFundingRate: 0.002, // should be 0.3%
     LP_Slippage: 0.001, // should be 0.3%
-    LP_StopLoss: 0.003, // should be 0.3%
+    LP_StopLoss: 0.009, // should be 0.3%
     LP_AcceptableLoss: 0.002, // should be 0.3%
-    LP_TargetProfit: 0.002, // should be 0.2%
+    LP_TargetProfit: 0.008, // should be 0.2%
 
     // RISK MANAGEMENT
     amount: 10,
@@ -49,11 +49,17 @@ const defaultConfig = {
     isHedgeMode: true,
 
     // BINANCE
-    apiKey: process.env.BINANCE_API_KEY,
-    apiSecret: process.env.BINANCE_API_SECRET,
+    // apiKey: process.env.BINANCE_API_KEY,
+    // apiSecret: process.env.BINANCE_API_SECRET,
+    // BYBIT
+    apiKey: process.env.BYBIT_API_KEY,
+    apiSecret: process.env.BYBIT_API_SECRET,
     // MEXC
     // apiKey: process.env.MEXC_API_KEY,
-    // apiSecret: process.env.MEXC_API_SECRET
+    // apiSecret: process.env.MEXC_API_SECRET,
+    // BITGET
+    // apiKey: process.env.BITGET_API_KEY,
+    // apiSecret: process.env.BITGET_API_SECRET,
 }
 
 const config = process.env.NODE_ENV === 'production' ? {

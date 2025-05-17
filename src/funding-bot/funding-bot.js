@@ -19,9 +19,12 @@ class FundingBot {
         this.isBacktest = isBacktest
 
         // ********** INITIALIZATION **********
-
-        this.pairName = fundingData.symbol.replace(':USDT', '')
-        this.symbol = this.pairName.replace('/', '')
+        // BINANCE
+        // this.pairName = fundingData.symbol.replace(':USDT', '')
+        // this.symbol = this.pairName.replace('/', '')
+        // BYBIT
+        this.pairName = fundingData.symbol
+        this.symbol = this.pairName.replace(':USDT', '').replace('/', '')
 
         this.isPositiveFunding = this.fundingData.fundingRate > 0
         this.isNegativeFunding = this.fundingData.fundingRate < 0
@@ -75,7 +78,19 @@ class FundingBot {
         const symbol = this.pairName.split('/')[0]
         const date = Date.now().toString().slice(4)
         const randomChars = Math.random().toString(36).substring(2, 6)
-        return `${strategyId}_${symbol}_${date}_${randomChars}`
+        const customOrderId = `${strategyId}_${symbol}_${date}_${randomChars}`
+
+        const exchangeId = this.exchange.exchange.id
+        
+        const customOrderIdProperty = {
+            'binance': 'clientOrderId',
+            'binanceusdm': 'clientOrderId',
+            'bybit': 'orderLinkId'
+        }[exchangeId]
+
+        return {
+            [customOrderIdProperty]: customOrderId
+        }
     }
 
     async handleOrderUpdate(order) {
@@ -170,12 +185,11 @@ class FundingBot {
     async onOrderbookBestBidAskUpdateEvent(data) {
         if (this.isProcessingOrderbookBestBidAskUpdateEvent || this.isShuttingDown) return
 
-        const askPrice = data.askPrice
-        const bidPrice = data.bidPrice
-
-        const spread = ((askPrice - bidPrice) / bidPrice) * 100
-
         this.isProcessingOrderbookBestBidAskUpdateEvent = true
+
+        if (data.askPrice) this.orderBook.askPrice = data.askPrice
+        if (data.bidPrice) this.orderBook.bidPrice = data.bidPrice
+        this.orderBook.spread = ((this.orderBook.askPrice - this.orderBook.bidPrice) / this.orderBook.bidPrice) * 100
 
         // logger.debug(chalk.cyan('Market price update:'))
         // logger.debug(chalk.cyan(`Ask: ${chalk.yellow(askPrice)}`))
@@ -184,12 +198,6 @@ class FundingBot {
         // if (Math.abs(spread - this.orderBook.spread) > 0.01) {
         //     logger.debug(chalk.cyan(`Spread ${this.pairName}: ${chalk.yellow(spread)}`))
         // }
-
-        this.orderBook = {
-            askPrice,
-            bidPrice,
-            spread
-        }
 
         this.isProcessingOrderbookBestBidAskUpdateEvent = false
     }
@@ -214,6 +222,9 @@ class FundingBot {
             this.exchange.onPriceUpdate = this.onOrderbookBestBidAskUpdateEvent.bind(this)
 
             await this.exchange.subscribeToBookTicker(this.pairName)
+
+            if (!this.isBacktest) await wait(2000) // live 4000, backtest 1000
+
             logger.info(chalk.green(`[Bot ${this.pairName}] ====== Funding-bot initialization complete ======`))
 
         } catch (error) {
@@ -256,7 +267,7 @@ class FundingBot {
             async () => {
                 if (this.isShuttingDown) return
                 try {
-                    const fundingData = await this.exchange.exchange.fetchFundingRate(this.pairName)
+                    const fundingData = await this.exchange.fetchFundingRate(this.pairName)
                     this.fundingData = fundingData
 
                     if (this.isFundingProfitDeltaIgnoredPositionOpen || this.isFundingIgnoredDeltaProfitPositionOpen || this.isFundingLossDeltaProfitPositionOpen) return
@@ -329,8 +340,8 @@ class FundingBot {
     
     startFundingLossDeltaProfitCronJob() {
         this.openFundingLossDeltaProfitCron = new CronJob(
-            '57 59 * * * *',
-            // '58 * * * * *',
+            // '57 59 * * * *',
+            '58 * * * * *',
             async () => {
                 if (this.isShuttingDown) return
                 await this.openFundingLossDeltaProfitPosition()
@@ -341,8 +352,8 @@ class FundingBot {
         )
 
         this.closeFundingLossDeltaProfitCron = new CronJob(
-            '0 3 * * * *',
-            // '30 * * * * *',
+            // '0 3 * * * *',
+            '30 * * * * *',
             async () => {
                 if (this.isShuttingDown) return
                 await this.closeFundingLossDeltaProfitPosition()
@@ -379,10 +390,10 @@ class FundingBot {
                 this.pairName,
                 entrySide,
                 this.quantity,
-                { ...entryParams, clientOrderId: this.createClientOrderId('P-I') }
+                { ...entryParams, ...this.createClientOrderId('P-I') }
             )
 
-            logger.info(chalk.green(`[Bot ${this.pairName} (P-I)] Placed ENTRY ${positionSide} ${entrySide} ${entryOrder.type.toUpperCase()} order: FILLED ${entryOrder.filled} @ ${entryOrder.average}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (P-I)] Placed ENTRY ${positionSide} ${entrySide} ${entryOrder.type?.toUpperCase()} order: FILLED ${entryOrder.filled} @ ${entryOrder.average}`))
         } catch (error) {
             logger.error(chalk.red(`[Bot ${this.pairName} (P-I)] Error placing ENTRY order: ${error.message}`))
         }
@@ -400,10 +411,10 @@ class FundingBot {
                 this.pairName,
                 exitSide,
                 this.quantity,
-                { ...exitParams, clientOrderId: this.createClientOrderId('P-I') }
+                { ...exitParams, ...this.createClientOrderId('P-I') }
             )
             
-            logger.info(chalk.green(`[Bot ${this.pairName} (P-I)] Placed EXIT ${positionSide} ${exitSide} ${exitOrder.type.toUpperCase()} order: FILLED ${exitOrder.filled} @ ${exitOrder.average}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (P-I)] Placed EXIT ${positionSide} ${exitSide} ${exitOrder.type?.toUpperCase()} order: FILLED ${exitOrder.filled} @ ${exitOrder.average}`))
         } catch (error) {
             if (shouldFilterError([-2022], error)) return
             logger.error(chalk.red(`[Bot ${this.pairName} (P-I)] Error placing EXIT order: ${error.message}`))
@@ -437,21 +448,21 @@ class FundingBot {
                     exitSide,
                     this.quantity,
                     stopLossPrice,
-                    { ...exitParams, clientOrderId: this.createClientOrderId('P-I') }
+                    { ...exitParams, ...this.createClientOrderId('P-I') }
                 ),
                 this.exchange.createLimitOrder(
                     this.pairName,
                     exitSide,
                     this.quantity,
                     takeProfitPrice,
-                    { ...exitParams, clientOrderId: this.createClientOrderId('P-I') }
+                    { ...exitParams, ...this.createClientOrderId('P-I') }
                 )
             ])
 
             this.fundingProfitDeltaIgnoredOpenOrders.push(stopLossOrder, takeProfitOrder)
             
-            logger.info(chalk.green(`[Bot ${this.pairName} (P-I)] Placed Stop-Loss ${positionSide} ${exitSide} ${stopLossOrder.type.toUpperCase()} order: TRIGGER ${stopLossOrder.amount} @ ${stopLossOrder.triggerPrice}`))
-            logger.info(chalk.green(`[Bot ${this.pairName} (P-I)] Placed Take-Profit ${positionSide} ${exitSide} ${takeProfitOrder.type.toUpperCase()} order: LIMIT ${takeProfitOrder.amount} @ ${takeProfitOrder.price}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (P-I)] Placed Stop-Loss ${positionSide} ${exitSide} ${stopLossOrder.type?.toUpperCase()} order: TRIGGER ${stopLossOrder.amount} @ ${stopLossOrder.triggerPrice}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (P-I)] Placed Take-Profit ${positionSide} ${exitSide} ${takeProfitOrder.type?.toUpperCase()} order: LIMIT ${takeProfitOrder.amount} @ ${takeProfitOrder.price}`))
         } catch (error) {
             if (shouldFilterError([-2022], error)) return
             logger.error(chalk.red(`[Bot ${this.pairName} (P-I)] Error handling position open: ${error.message}`))
@@ -512,12 +523,12 @@ class FundingBot {
                 entrySide,
                 this.quantity,
                 entryPrice,
-                { ...entryParams, clientOrderId: this.createClientOrderId('I-P') }
+                { ...entryParams, ...this.createClientOrderId('I-P') }
             )
 
             this.fundingIgnoredDeltaProfitOpenOrders.push(entryOrder)
 
-            logger.info(chalk.green(`[Bot ${this.pairName} (I-P)] Placed ENTRY ${positionSide} ${entrySide} ${entryOrder.type.toUpperCase()} order: TRIGGER ${entryOrder.amount} @ ${entryOrder.stopPrice}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (I-P)] Placed ENTRY ${positionSide} ${entrySide} ${entryOrder.type?.toUpperCase()} order: TRIGGER ${entryOrder.amount} @ ${entryOrder.stopPrice}`))
         } catch (error) {
             logger.error(chalk.red(`[Bot ${this.pairName} (I-P)] Error placing ENTRY order: ${error.message}`))
         }
@@ -535,10 +546,10 @@ class FundingBot {
                 this.pairName,
                 exitSide,
                 this.quantity,
-                { ...exitParams, clientOrderId: this.createClientOrderId('I-P') }
+                { ...exitParams, ...this.createClientOrderId('I-P') }
             )
             
-            logger.info(chalk.green(`[Bot ${this.pairName} (I-P)] Placed EXIT ${positionSide} ${exitSide} ${exitOrder.type.toUpperCase()} order: FILLED ${exitOrder.filled} @ ${exitOrder.average}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (I-P)] Placed EXIT ${positionSide} ${exitSide} ${exitOrder.type?.toUpperCase()} order: FILLED ${exitOrder.filled} @ ${exitOrder.average}`))
         } catch (error) {
             if (shouldFilterError([-2022], error)) return
             logger.error(chalk.red(`[Bot ${this.pairName} (I-P)] Error placing EXIT order: ${error.message}`))
@@ -571,21 +582,21 @@ class FundingBot {
                     exitSide,
                     this.quantity,
                     stopLossPrice,
-                    { ...exitParams, clientOrderId: this.createClientOrderId('I-P') }
+                    { ...exitParams, ...this.createClientOrderId('I-P') }
                 ),
                 this.exchange.createLimitOrder(
                     this.pairName,
                     exitSide,
                     this.quantity,
                     takeProfitPrice,
-                    { ...exitParams, clientOrderId: this.createClientOrderId('I-P') }
+                    { ...exitParams, ...this.createClientOrderId('I-P') }
                 )
             ])
 
             this.fundingIgnoredDeltaProfitOpenOrders.push(stopLossOrder, takeProfitOrder)
             
-            logger.info(chalk.green(`[Bot ${this.pairName} (I-P)] Placed Stop-Loss ${positionSide} ${exitSide} ${stopLossOrder.type.toUpperCase()} order: TRIGGER ${stopLossOrder.amount} @ ${stopLossOrder.triggerPrice}`))
-            logger.info(chalk.green(`[Bot ${this.pairName} (I-P)] Placed Take-Profit ${positionSide} ${exitSide} ${takeProfitOrder.type.toUpperCase()} order: LIMIT ${takeProfitOrder.amount} @ ${takeProfitOrder.price}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (I-P)] Placed Stop-Loss ${positionSide} ${exitSide} ${stopLossOrder.type?.toUpperCase()} order: TRIGGER ${stopLossOrder.amount} @ ${stopLossOrder.triggerPrice}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (I-P)] Placed Take-Profit ${positionSide} ${exitSide} ${takeProfitOrder.type?.toUpperCase()} order: LIMIT ${takeProfitOrder.amount} @ ${takeProfitOrder.price}`))
         } catch (error) {
             if (shouldFilterError([-2022], error)) return
             logger.error(chalk.red(`[Bot ${this.pairName} (I-P)] Error handling position open: ${error.message}`))
@@ -641,10 +652,10 @@ class FundingBot {
                 this.pairName,
                 entrySide,
                 this.quantity,
-                { ...entryParams, clientOrderId: this.createClientOrderId('L-P') }
+                { ...entryParams, ...this.createClientOrderId('L-P') }
             )
 
-            logger.info(chalk.green(`[Bot ${this.pairName} (L-P)] Placed ENTRY ${positionSide} ${entrySide} ${entryOrder.type.toUpperCase()} order: FILLED ${entryOrder.filled} @ ${entryOrder.average}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (L-P)] Placed ENTRY ${positionSide} ${entrySide} ${entryOrder.type?.toUpperCase()} order: FILLED ${entryOrder.filled} @ ${entryOrder.average}`))
         } catch (error) {
             logger.error(chalk.red(`[Bot ${this.pairName} (L-P)] Error placing ENTRY order: ${error.message}`))
         }
@@ -662,10 +673,10 @@ class FundingBot {
                 this.pairName,
                 exitSide,
                 this.quantity,
-                { ...exitParams, clientOrderId: this.createClientOrderId('L-P') }
+                { ...exitParams, ...this.createClientOrderId('L-P'), reduceOnly: true }
             )
             
-            logger.info(chalk.green(`[Bot ${this.pairName} (L-P)] Placed EXIT ${positionSide} ${exitSide} ${exitOrder.type.toUpperCase()} order: FILLED ${exitOrder.filled} @ ${exitOrder.average}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (L-P)] Placed EXIT ${positionSide} ${exitSide} ${exitOrder.type?.toUpperCase()} order: FILLED ${exitOrder.filled} @ ${exitOrder.average}`))
         } catch (error) {
             if (shouldFilterError([-2022], error)) return
             logger.error(chalk.red(`[Bot ${this.pairName} (L-P)] Error placing EXIT order: ${error.message}`))
@@ -699,6 +710,7 @@ class FundingBot {
 
             const exitSide = positionSide === 'LONG' ? 'SELL' : 'BUY'
             const exitParams = this.config.isHedgeMode || this.isBacktest ? { positionSide } : { reduceOnly: true }
+            const triggerDirection = positionSide === 'LONG' ? 2 : 1
 
             const [stopLossOrder, takeProfitOrder] = await Promise.all([
                 this.exchange.createStopLossOrder(
@@ -706,21 +718,26 @@ class FundingBot {
                     exitSide,
                     this.quantity, 
                     stopLossPrice,
-                    { ...exitParams, clientOrderId: this.createClientOrderId('L-P') }
+                    { 
+                        ...exitParams, 
+                        ...this.createClientOrderId('L-P'),
+                        triggerDirection: triggerDirection,
+                        reduceOnly: true,
+                    }
                 ),
                 this.exchange.createLimitOrder(
                     this.pairName,
                     exitSide, 
                     this.quantity,
                     takeProfitPrice,
-                    { ...exitParams, clientOrderId: this.createClientOrderId('L-P') }
+                    { ...exitParams, ...this.createClientOrderId('L-P'), reduceOnly: true, }
                 )
             ])
 
             this.fundingLossDeltaProfitOpenOrders.push(stopLossOrder, takeProfitOrder)
             
-            logger.info(chalk.green(`[Bot ${this.pairName} (L-P)] Placed Stop-Loss ${positionSide} ${exitSide} ${stopLossOrder.type.toUpperCase()} order: TRIGGER ${stopLossOrder.amount} @ ${stopLossOrder.triggerPrice}`))
-            logger.info(chalk.green(`[Bot ${this.pairName} (L-P)] Placed Take-Profit ${positionSide} ${exitSide} ${takeProfitOrder.type.toUpperCase()} order: LIMIT ${takeProfitOrder.amount} @ ${takeProfitOrder.price}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (L-P)] Placed Stop-Loss ${positionSide} ${exitSide} ${stopLossOrder.type?.toUpperCase()} order: TRIGGER ${stopLossOrder.amount} @ ${stopLossOrder.triggerPrice}`))
+            logger.info(chalk.green(`[Bot ${this.pairName} (L-P)] Placed Take-Profit ${positionSide} ${exitSide} ${takeProfitOrder.type?.toUpperCase()} order: LIMIT ${takeProfitOrder.amount} @ ${takeProfitOrder.price}`))
         } catch (error) {
             if (shouldFilterError([-2022], error)) return
             logger.error(chalk.red(`[Bot ${this.pairName} (L-P)] Error handling position open: ${error.message}`))
@@ -795,6 +812,12 @@ class FundingBot {
                     logger.info(chalk.green(`[Bot ${this.pairName}] Successfully sold ${exitOrder.filled} ${baseAsset} at ${exitOrder.average}`))
                 }
             } else if (this.exchange.marketType === 'linear') {
+                
+                // TODO: implement support for BYBIT
+                if (this.exchange.exchange.id === 'bybit') {
+                    return
+                }
+
                 const positions = balance.info.positions.filter(p => p.symbol === this.pairName.replace('/', ''))
 
                 for (const position of positions) {

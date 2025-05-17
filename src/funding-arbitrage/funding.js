@@ -27,13 +27,13 @@ async function fundingRatePairsSelection(exchange, config) {
     }
 }
 
-async function getFundingRates(exchange) {
+async function getFundingRates(exchange, includeSpotPairs = false, onlyUpcomingFundingRates = false) {
     try {
         // Load all markets to get USDT pairs
         const markets = await exchange.loadMarkets()
-        const usdtPairs = Object.keys(markets)
-            // .filter(symbol => symbol.endsWith('/USDT:USDT') && markets[symbol.replace('/USDT:USDT', '/USDT')]) // Spot pair is not needed if no hedge
-            .filter(symbol => symbol.endsWith('/USDT:USDT'))
+        const usdtPairs = includeSpotPairs ? 
+            Object.keys(markets).filter(symbol => symbol.endsWith('/USDT:USDT') && markets[symbol.replace('/USDT:USDT', '/USDT')]) :
+            Object.keys(markets).filter(symbol => symbol.endsWith('/USDT:USDT'))
 
         const isMEXC = exchange.id === 'mexc'
 
@@ -41,14 +41,16 @@ async function getFundingRates(exchange) {
             await fetchExchangeFundingRatesMEXC(exchange, usdtPairs) : 
             await fetchExchangeFundingRatesCCXT(exchange, usdtPairs)
 
-        const upcomingFundingRates = fundingRates
+        const upcomingFundingRates = onlyUpcomingFundingRates ? 
+            fundingRates
             // .filter(rate => rate.info.maxFundingRate > MIN_FUNDING_RATE_CAP)
             .filter(rate => {
                 if (!rate.fundingDatetime) return false
                 const fundingTime = new Date(rate.fundingDatetime).getTime()
                 const now = Date.now()
                 return fundingTime > now && fundingTime <= now + UPCOMING_FUNDING_WINDOW_MINUTES * 60 * 1000
-            })
+            }) : 
+            fundingRates
         
         const positiveFundingRates = upcomingFundingRates
             .filter(rate => rate.fundingRate > 0)

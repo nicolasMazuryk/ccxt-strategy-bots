@@ -262,6 +262,10 @@ class BinanceExchange extends BaseExchange {
 
         return false
     }
+
+    async fetchFundingRate(symbol) {
+        return retry(async () => this.exchange.fetchFundingRate(symbol))
+    }
 }
 
 export { BinanceExchange }
