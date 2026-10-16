@@ -10,7 +10,7 @@ const MIN_FUNDING_RATE_CAP = 0.0002 // 0.02%
 const MEXC_RATE_LIMIT_TIMEOUT_MS = 1000
 
 async function fundingRatePairsSelection(exchange, config) {
-    const { positiveFundingRates, negativeFundingRates, absoluteFundingRates } = await getFundingRates(exchange)
+    const { positiveFundingRates, negativeFundingRates, absoluteFundingRates } = await getFundingRates(exchange, false, true)
 
     const positiveFundingRatesAboveThreshold = positiveFundingRates.filter(rate => rate.fundingRate >= config.positiveFundingRateThreshold)
     const negativeFundingRatesBelowThreshold = negativeFundingRates.filter(rate => rate.fundingRate <= config.negativeFundingRateThreshold)

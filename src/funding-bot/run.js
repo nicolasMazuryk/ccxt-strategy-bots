@@ -51,24 +51,24 @@ const selectFundingPairs = async () => {
 }
 
 // DEVELOPMENT
-selectFundingPairs()
+// selectFundingPairs()
 
 // PRODUCTION
-// new CronJob(
-//     '0 58 * * * *',
-//     // '40 * * * * *',
-// 	async () => {
-//         logger.info(chalk.magenta('*'.repeat(60)))
-//         logger.info(chalk.magenta('*'.repeat(60)))
-//         logger.info(chalk.magenta(`FUNDING CYCLE ${new Date().toISOString().slice(0, 19).replace('T', ' ')}: STARTING`))
-//         logger.info(chalk.magenta('*'.repeat(60)))
-//         logger.info(chalk.magenta('*'.repeat(60)))
+new CronJob(
+    '0 58 * * * *',
+    // '40 * * * * *',
+	async () => {
+        logger.info(chalk.magenta('*'.repeat(60)))
+        logger.info(chalk.magenta('*'.repeat(60)))
+        logger.info(chalk.magenta(`FUNDING CYCLE ${new Date().toISOString().slice(0, 19).replace('T', ' ')}: STARTING`))
+        logger.info(chalk.magenta('*'.repeat(60)))
+        logger.info(chalk.magenta('*'.repeat(60)))
 
-//         await selectFundingPairs()
-// 	},
-// 	() => {},
-// 	true,
-// 	'utc'
-// );
+        await selectFundingPairs()
+	},
+	() => {},
+	true,
+	'utc'
+);
 
 logger.info(chalk.magenta('Funding Bot Started Successfully'))

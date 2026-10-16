@@ -24,7 +24,7 @@ class BybitExchange extends BaseExchange {
             apiKey: apiKey,
             secret: apiSecret,
             enableRateLimit: true,
-            options: { defaultType: marketType }
+            options: { defaultType: 'linear' }
         })
     }
 
@@ -126,23 +126,25 @@ class BybitExchange extends BaseExchange {
     }
 
     async subscribeToUserData() {
-        if (this.marketType === 'spot') {
-            logger.info(chalk.cyan(`[Bybit] Subscribing to ${this.marketType} user data stream...`))
+        if (this.marketType.includes('spot')) {
+            logger.info(chalk.cyan(`[Bybit] Subscribing to SPOT user data stream...`))
             this.wsClient.subscribeV5(['order'], 'spot')
-        } else {
-            logger.info(chalk.cyan(`[Bybit] Subscribing to ${this.marketType} user data stream...`))
+        }
+        if (this.marketType.includes('linear')) {
+            logger.info(chalk.cyan(`[Bybit] Subscribing to LINEAR user data stream...`))
             this.wsClient.subscribeV5(['order', 'position'], 'linear')
         }
     }
 
     async subscribeToBookTicker(symbol) {
         const formattedSymbol = symbol.replace(':USDT', '').replace('/', '')
-        if (this.marketType === 'spot') {
-            logger.info(chalk.cyan(`[Bybit ${formattedSymbol}] Subscribing to spot book ticker...`))
-            this.wsClient.subscribeV5([`orderbook.50.${formattedSymbol}`], 'spot')
-        } else {
-            logger.info(chalk.cyan(`[Bybit ${formattedSymbol}] Subscribing to linear book ticker...`))
-            this.wsClient.subscribeV5([`orderbook.50.${formattedSymbol}`], 'linear')
+        if (this.marketType.includes('spot')) {
+            logger.info(chalk.cyan(`[Bybit ${formattedSymbol}] Subscribing to SPOT book ticker...`))
+            this.wsClient.subscribeV5([`orderbook.1.${formattedSymbol}`], 'spot')
+        }
+        if (this.marketType.includes('linear')) {
+            logger.info(chalk.cyan(`[Bybit ${formattedSymbol}] Subscribing to LINEAR book ticker...`))
+            this.wsClient.subscribeV5([`orderbook.1.${formattedSymbol}`], 'linear')
         }
     }
 

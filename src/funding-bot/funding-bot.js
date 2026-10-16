@@ -340,8 +340,8 @@ class FundingBot {
     
     startFundingLossDeltaProfitCronJob() {
         this.openFundingLossDeltaProfitCron = new CronJob(
-            // '57 59 * * * *',
-            '58 * * * * *',
+            '57 59 * * * *',
+            // '58 * * * * *',
             async () => {
                 if (this.isShuttingDown) return
                 await this.openFundingLossDeltaProfitPosition()
@@ -352,8 +352,8 @@ class FundingBot {
         )
 
         this.closeFundingLossDeltaProfitCron = new CronJob(
-            // '0 3 * * * *',
-            '30 * * * * *',
+            '0 3 * * * *',
+            // '30 * * * * *',
             async () => {
                 if (this.isShuttingDown) return
                 await this.closeFundingLossDeltaProfitPosition()
@@ -411,7 +411,7 @@ class FundingBot {
                 this.pairName,
                 exitSide,
                 this.quantity,
-                { ...exitParams, ...this.createClientOrderId('P-I') }
+                { ...exitParams, ...this.createClientOrderId('P-I'), reduceOnly: true }
             )
             
             logger.info(chalk.green(`[Bot ${this.pairName} (P-I)] Placed EXIT ${positionSide} ${exitSide} ${exitOrder.type?.toUpperCase()} order: FILLED ${exitOrder.filled} @ ${exitOrder.average}`))
@@ -437,6 +437,7 @@ class FundingBot {
 
             const exitSide = positionSide === 'LONG' ? 'SELL' :'BUY'
             const exitParams = this.config.isHedgeMode || this.isBacktest ? { positionSide } : { reduceOnly: true }
+            const triggerDirection = positionSide === 'LONG' ? 2 : 1
 
             if (isNaN(this.quantity) || isNaN(stopLossPrice) || isNaN(takeProfitPrice) || this.quantity === 0 || stopLossPrice === 0 || takeProfitPrice === 0) {
                 logger.error(chalk.red(`[Bot ${this.pairName} (P-I)] Invalid quantity or stop loss or take profit price: ${this.quantity} or ${stopLossPrice} or ${takeProfitPrice}`))
@@ -448,14 +449,19 @@ class FundingBot {
                     exitSide,
                     this.quantity,
                     stopLossPrice,
-                    { ...exitParams, ...this.createClientOrderId('P-I') }
+                    { 
+                        ...exitParams, 
+                        ...this.createClientOrderId('P-I'),
+                        triggerDirection: triggerDirection,
+                        reduceOnly: true,
+                    }
                 ),
                 this.exchange.createLimitOrder(
                     this.pairName,
                     exitSide,
                     this.quantity,
                     takeProfitPrice,
-                    { ...exitParams, ...this.createClientOrderId('P-I') }
+                    { ...exitParams, ...this.createClientOrderId('P-I'), reduceOnly: true }
                 )
             ])
 
@@ -517,13 +523,18 @@ class FundingBot {
             const entrySide = this.isPositiveFunding ? 'BUY' : 'SELL'
             const positionSide = this.isPositiveFunding ? 'LONG' : 'SHORT'
             const entryParams = this.config.isHedgeMode || this.isBacktest ? { positionSide } : {}
+            const triggerDirection = positionSide === 'LONG' ? 1 : 2 // breakout direction
 
             const entryOrder = await this.exchange.createStopMarketOrder(
                 this.pairName,
                 entrySide,
                 this.quantity,
                 entryPrice,
-                { ...entryParams, ...this.createClientOrderId('I-P') }
+                { 
+                    ...entryParams, 
+                    ...this.createClientOrderId('I-P'),
+                    triggerDirection: triggerDirection,
+                }
             )
 
             this.fundingIgnoredDeltaProfitOpenOrders.push(entryOrder)
@@ -546,7 +557,7 @@ class FundingBot {
                 this.pairName,
                 exitSide,
                 this.quantity,
-                { ...exitParams, ...this.createClientOrderId('I-P') }
+                { ...exitParams, ...this.createClientOrderId('I-P'), reduceOnly: true }
             )
             
             logger.info(chalk.green(`[Bot ${this.pairName} (I-P)] Placed EXIT ${positionSide} ${exitSide} ${exitOrder.type?.toUpperCase()} order: FILLED ${exitOrder.filled} @ ${exitOrder.average}`))
@@ -575,6 +586,7 @@ class FundingBot {
 
             const exitSide = positionSide === 'LONG' ? 'SELL' : 'BUY'
             const exitParams = this.config.isHedgeMode || this.isBacktest ? { positionSide } : { reduceOnly: true }
+            const triggerDirection = positionSide === 'LONG' ? 2 : 1
 
             const [stopLossOrder, takeProfitOrder] = await Promise.all([
                 this.exchange.createStopLossOrder(
@@ -582,14 +594,19 @@ class FundingBot {
                     exitSide,
                     this.quantity,
                     stopLossPrice,
-                    { ...exitParams, ...this.createClientOrderId('I-P') }
+                    { 
+                        ...exitParams, 
+                        ...this.createClientOrderId('I-P'),
+                        triggerDirection: triggerDirection,
+                        reduceOnly: true,
+                    }
                 ),
                 this.exchange.createLimitOrder(
                     this.pairName,
                     exitSide,
                     this.quantity,
                     takeProfitPrice,
-                    { ...exitParams, ...this.createClientOrderId('I-P') }
+                    { ...exitParams, ...this.createClientOrderId('I-P'), reduceOnly: true }
                 )
             ])
 
