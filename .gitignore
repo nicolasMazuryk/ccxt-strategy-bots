@@ -3,12 +3,16 @@ node_modules
 .clinic/*
 
 terraform/.terraform/*
+*.tfstate*
+terraform.tfvars
 
 logs/*
 
 market-data/*
 backtest-results/*
 
-.DS_Store
+.env
+.env.*
+!.env.example
 
-zzzzzz/*
+.DS_Store
