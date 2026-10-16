@@ -35,7 +35,7 @@ async function placeBuyOrder() {
         const orderCost = orderSize * bestBidPrice
 
         if (orderSize < minQuantity) {
-            throw new Error(`Order size ${roundedOrderSize} is less than minimum ${minAmount}`)
+            throw new Error(`Order size ${orderSize} is less than minimum ${minAmount}`)
         }
         if (orderCost < minAmount) {
             throw new Error(`Order cost ${orderCost} is less than minimum ${minAmount}`)

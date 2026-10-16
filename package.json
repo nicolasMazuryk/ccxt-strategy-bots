@@ -1,15 +1,26 @@
 {
-  "name": "investment-strategy",
+  "name": "ccxt-strategy-bots",
   "version": "1.0.0",
+  "description": "Grid, wick-reversal and funding-arbitrage trading bots built on ccxt, containerised and deployed to AWS ECS with Terraform.",
+  "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=20.6"
+  },
   "scripts": {
+    "grid-bot": "node --env-file=.env src/grid-bot/run.js",
+    "wick-bot": "node --env-file=.env src/wick-bot/run.js",
+    "funding-bot": "node --env-file=.env src/funding-bot/run.js",
+    "funding-spot-perp-bot": "node --env-file=.env src/funding-spot-perp-bot/run.js",
     "deploy": "bash docker/deploy.sh",
     "terraform": "cd terraform && terraform apply",
     "download-market-data": "node src/backtester/market-data/download-market-data.js",
     "filter-market-data": "node src/backtester/market-data/filter-market-data.js",
     "get-data": "npm run download-market-data && npm run filter-market-data",
     "grid-risk": "node src/grid-bot/grid-risk-calculator/run.js",
-    "backtest": "node src/backtester/run.js"
+    "backtest": "node src/backtester/run-backtest.js",
+    "lint": "eslint src test",
+    "test": "node --test"
   },
   "dependencies": {
     "axios": "^1.7.9",
@@ -22,5 +33,10 @@
     "decimal.js": "^10.4.3",
     "extract-zip": "^2.0.1",
     "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0"
   }
 }
